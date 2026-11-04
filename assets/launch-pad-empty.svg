@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="currentColor" stroke-width="1.6" d="M10 52h44v4H10z"/>
+  <path stroke="currentColor" stroke-width="1.6" d="M20 52V14M30 52V14M20 14h10M20 22h10M20 30h10M20 38h10M20 46h10M20 22l10 8M30 22l-10 8M20 38l10 8M30 38l-10 8"/>
+  <path stroke="currentColor" stroke-width="1.6" d="M30 24h10M40 24v4M44 52v-9M50 52v-9M44 43h6"/>
+  <ellipse stroke="currentColor" stroke-width="1.6" cx="32" cy="33" rx="24" ry="8.5" opacity=".28" stroke-dasharray="2.5 4.5" transform="rotate(-16 32 33)"/>
+</svg>

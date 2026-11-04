@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.vk2r.mission",
+  "name": "Mission",
+  "version": "1.0.0",
+  "author": "vk",
+  "license": "MIT",
+  "description": "Puts MausBot behind one bar icon: a click opens the team panel, with every bot, its state and the work it is on, and the team's spend for the day, week or month with the turns it finished in its footer. Settings, in the panel's header, picks the language among eight, the period the footer adds up and the notifications; the costs button opens that period as a sparkline, a split bar and a list by bot or by model. A middle click hides and brings back the window (or launches the app), and a turn between bots raises a notification. One Rust engine serves every screen. Built for Omarchy, which has no tray for it.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Mission",
+    "description": "The team, its spend and its last turns; middle-click to hide or show the window",
+    "category": "System",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}

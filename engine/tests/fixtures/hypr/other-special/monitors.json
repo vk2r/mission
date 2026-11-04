@@ -1,0 +1,56 @@
+[
+  {
+    "id": 0,
+    "name": "DP-1",
+    "width": 2560,
+    "height": 1440,
+    "refreshRate": 165.00000,
+    "x": 480,
+    "y": 0,
+    "activeWorkspace": {
+      "id": -98,
+      "name": "special:scratchpad"
+    },
+    "specialWorkspace": {
+      "id": 0,
+      "name": ""
+    },
+    "reserved": [
+      0,
+      26,
+      0,
+      0
+    ],
+    "scale": 1,
+    "transform": 0,
+    "focused": true,
+    "dpmsStatus": true
+  },
+  {
+    "id": 1,
+    "name": "HDMI-A-1",
+    "width": 3840,
+    "height": 2160,
+    "refreshRate": 143.85699,
+    "x": -2400,
+    "y": -938,
+    "activeWorkspace": {
+      "id": 8,
+      "name": "8"
+    },
+    "specialWorkspace": {
+      "id": 0,
+      "name": ""
+    },
+    "reserved": [
+      0,
+      26,
+      0,
+      0
+    ],
+    "scale": 1.3333334,
+    "transform": 0,
+    "focused": false,
+    "dpmsStatus": true
+  }
+]

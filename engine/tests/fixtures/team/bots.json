@@ -1,0 +1,37 @@
+[
+  {
+    "id": "boss",
+    "name": "Boss",
+    "title": "Chief of Staff",
+    "description": "Runs the team",
+    "chiefOfStaff": true,
+    "section": "General",
+    "mascotBody": "blob",
+    "color": "blue",
+    "mascotExpression": "focused"
+  },
+  { "id": "nameless", "name": "", "title": "No name at all", "mascotBody": "star" },
+  {
+    "id": "dev",
+    "name": "Dev",
+    "title": "Engineer",
+    "description": "builds things",
+    "department": "Engineering",
+    "mascotBody": "not-a-body",
+    "color": "not-a-colour",
+    "mascotExpression": "deadpan"
+  },
+  {
+    "id": "ops",
+    "name": "Ops",
+    "title": "Monitor",
+    "description": "watches status",
+    "chiefOfStaff": false,
+    "mascotFaceColor": "black",
+    "mascotExpression": "not-a-face"
+  },
+  { "id": "designer", "name": "Designer", "title": "Design", "description": "creative work", "section": "  Design  " },
+  { "id": "ghost", "name": "Ghost" },
+  { "id": "titled", "name": "Numbered", "title": 0, "description": null },
+  "not-a-bot"
+]

@@ -1,0 +1,12 @@
+{"at":"2026-11-01T02:19:01.673403Z","costUsd":0.1,"outcome":{"status":"ok"}}
+{"at":"2026-11-01T01:19:01.673403+00:00","costUsd":0.2,"outcome":{"status":"error"}}
+{"at":"2026-11-01T16:19:01.673403+14:00","costUsd":0.3,"outcome":{"status":"ok"}}
+{"at":"2026-10-31T12:19:01.673403-14:00","costUsd":0.4}
+{"at":"2026-10-31T12:00:00","costUsd":1.5,"outcome":{"status":"ok"}}
+{"at":"2026-11-01T02:19:01.673403Z","costUsd":"5","outcome":{"status":"ok"}}
+{"at":"2026-11-01T02:19:01.673403Z","costUsd":0.05,"outcome":{"status":"ok"}}
+{"at": "nope", "costUsd": 9}
+not json at all
+{"costUsd":2,"outcome":{"status":"ok"}}
+{"at":"2026-10-31T02:19:01.673403+00:00","costUsd":7,"outcome":{"status":"ok"}}
+ÿþ not utf-8

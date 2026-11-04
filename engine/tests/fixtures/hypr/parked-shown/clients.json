@@ -1,0 +1,74 @@
+[
+  {
+    "address": "0x1000001",
+    "mapped": true,
+    "hidden": false,
+    "visible": true,
+    "at": [
+      496,
+      42
+    ],
+    "size": [
+      2528,
+      1382
+    ],
+    "workspace": {
+      "id": 1,
+      "name": "1"
+    },
+    "floating": false,
+    "monitor": 0,
+    "class": "helium",
+    "title": "Example window 1",
+    "initialClass": "helium",
+    "initialTitle": "Example window 1"
+  },
+  {
+    "address": "0x1000002",
+    "mapped": true,
+    "hidden": false,
+    "visible": true,
+    "at": [
+      496,
+      42
+    ],
+    "size": [
+      2528,
+      1382
+    ],
+    "workspace": {
+      "id": 2,
+      "name": "2"
+    },
+    "floating": false,
+    "monitor": 0,
+    "class": "zen",
+    "title": "Example window 2",
+    "initialClass": "zen",
+    "initialTitle": "Example window 2"
+  },
+  {
+    "address": "0x1000003",
+    "mapped": true,
+    "hidden": false,
+    "visible": true,
+    "at": [
+      -2384,
+      -896
+    ],
+    "size": [
+      2848,
+      1562
+    ],
+    "workspace": {
+      "id": -99,
+      "name": "special:openmausbot"
+    },
+    "floating": false,
+    "monitor": 1,
+    "class": "com.openmausbot.app",
+    "title": "Example window 3",
+    "initialClass": "com.openmausbot.app",
+    "initialTitle": "Example window 3"
+  }
+]

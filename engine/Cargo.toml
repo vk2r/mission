@@ -1,0 +1,26 @@
+[package]
+name = "openmausbot-engine"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.96"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "engine"
+path = "src/main.rs"
+
+[dependencies]
+rusqlite = { version = "0.41", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+jiff = "0.2"
+sha1_smol = "1"
+shlex = "2"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "s"
+strip = "symbols"
+panic = "unwind"

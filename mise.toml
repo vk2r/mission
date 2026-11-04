@@ -1,0 +1,45 @@
+[tools]
+rust = "1.98.0"
+"aqua:EmbarkStudios/cargo-deny" = "0.20.2"
+"github:EmbarkStudios/cargo-about" = "0.9.2"
+
+[env]
+CARGO_TARGET_DIR = "{{env.HOME}}/.cache/openmausbot-engine/target"
+
+[tasks.build]
+description = "Build bin/engine"
+run = "scripts/build-engine.sh"
+
+[tasks.test]
+description = "Run the engine's unit and integration tests and the translation check"
+run = [
+  "cargo test --locked --manifest-path engine/Cargo.toml",
+  "node scripts/check-i18n.mjs",
+  "node scripts/check-motion.mjs",
+  "node scripts/check-settings.mjs",
+  "scripts/check-silent.sh",
+]
+
+[tasks.i18n]
+description = "Check that every lang/*.js has the same keys, and that the QML reads them all"
+run = "node scripts/check-i18n.mjs"
+
+[tasks.fixtures]
+description = "Regenerate engine/tests/fixtures (timestamps relative to now)"
+run = "scripts/make-fixtures.sh"
+
+[tasks.audit]
+description = "Check the crates for advisories, licences and sources"
+run = "cargo-deny --manifest-path engine/Cargo.toml check"
+
+[tasks.licenses]
+description = "Regenerate licenses/THIRD-PARTY.txt from the crates linked into bin/engine"
+run = "cargo about generate --locked --fail -m engine/Cargo.toml engine/about.hbs -o licenses/THIRD-PARTY.txt"
+
+[tasks.snapshot]
+description = "Print one snapshot from bin/engine"
+run = "bin/engine --once | jq ."
+
+[tasks.validate]
+description = "Validate the plugin manifest"
+run = "omarchy plugin validate ."
