@@ -114,29 +114,13 @@ BarWidget {
   Item {
     id: pulse
     anchors.fill: parent
-    opacity: root.teamBusy ? 0.62 + root.glow * 0.38 : 1
+    opacity: root.teamBusy ? 0.25 + root.glow * 0.75 : 1
 
     BarIconButton {
       id: button
       anchors.fill: parent
       bar: root.bar
-      iconComponent: Component {
-        Item {
-          anchors.fill: parent
-          implicitWidth: 16
-          implicitHeight: 16
-
-          BrandIcon {
-            width: root.markSize
-            height: root.markSize
-            readonly property real ratio: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
-            x: Math.round((parent.width - width) / 2 * ratio) / ratio
-            y: Math.round((parent.height - height) / 2 * ratio) / ratio
-            tint: root.windowVisible ? Color.foreground : Qt.alpha(Color.foreground, 0.45)
-            accent: root.windowVisible ? Color.accent : Qt.alpha(Color.accent, 0.45)
-          }
-        }
-      }
+      iconComponent: Component { Item {} }
       slotSize: Style.bar.iconSlot
       fontSize: Style.bar.iconFont
       active: root.windowVisible
@@ -153,6 +137,17 @@ BarWidget {
           root.togglePanel()
         }
       }
+    }
+
+    BrandIcon {
+      width: root.markSize
+      height: root.markSize
+      readonly property real ratio: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
+      x: Math.round((button.width - width) / 2 * ratio) / ratio
+      y: Math.round((button.height - height) / 2 * ratio) / ratio
+      scale: button.pressScale
+      tint: root.windowVisible ? Color.foreground : Qt.alpha(Color.foreground, 0.45)
+      accent: root.windowVisible ? Color.accent : Qt.alpha(Color.accent, 0.45)
     }
   }
 

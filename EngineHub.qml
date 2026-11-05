@@ -36,8 +36,8 @@ Scope {
 
   function findEntry(cfg) {
     var layout = cfg && cfg.bar && cfg.bar.layout ? cfg.bar.layout : null
-    var sections = ["left", "center", "right"]
-    for (var i = 0; layout && i < sections.length; i++) {
+    var sections = layout ? Object.keys(layout) : []
+    for (var i = 0; i < sections.length; i++) {
       var list = layout[sections[i]] || []
       for (var j = 0; j < list.length; j++)
         if (list[j] && String(list[j].id) === hub.entryId) return list[j]

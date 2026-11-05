@@ -4,6 +4,8 @@
   </g>
   <g transform="translate(8 8) scale(1.55) translate(-8 -8)">
     <path fill="currentColor" d="M 8 5.7 Q 8.9 7.1 10.3 8 Q 8.9 8.9 8 10.3 Q 7.1 8.9 5.7 8 Q 7.1 7.1 8 5.7 Z"/>
+    <path fill="currentColor" d="M 5.72 4.13 Q 6.05 4.64 6.55 4.96 Q 6.05 5.29 5.72 5.79 Q 5.40 5.29 4.89 4.96 Q 5.40 4.64 5.72 4.13 Z"/>
+    <path fill="currentColor" d="M 10.35 10.21 Q 10.67 10.72 11.18 11.04 Q 10.67 11.37 10.35 11.87 Q 10.02 11.37 9.52 11.04 Q 10.02 10.72 10.35 10.21 Z"/>
     <path fill="none" stroke="accentColor" stroke-width="0.75" stroke-linecap="round" opacity="0.85" d="M 11.75 7.61 L 11.51 7.86 L 11.23 8.1 L 10.91 8.34 L 10.56 8.58 L 10.19 8.82 L 9.79 9.04 L 9.37 9.25 L 8.93 9.45 L 8.49 9.64 L 8.04 9.8 L 7.59 9.95 L 7.14 10.07 L 6.7 10.17 L 6.28 10.25 L 5.88 10.3 L 5.5 10.33 L 5.14 10.33"/>
   </g>
 </svg>
