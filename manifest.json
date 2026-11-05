@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "vk",
   "license": "MIT",
-  "description": "Puts MausBot behind one bar icon: a click opens the team panel, with every bot, its state and the work it is on, and the team's spend for the day, week or month with the turns it finished in its footer. Settings, in the panel's header, picks the language among eight, the period the footer adds up and the notifications; the costs button opens that period as a sparkline, a split bar and a list by bot or by model. A middle click hides and brings back the window (or launches the app), and a turn between bots raises a notification. One Rust engine serves every screen. Built for Omarchy, which has no tray for it.",
+  "description": "Your AI agent team, its work and its spend, right in the Omarchy bar. One click opens the team panel: every bot, its state and the task it is on. A second page shows what the team spent today, this week or this month, by bot or by model. Notifications when a bot answers another, the agent app's window one click away, eight languages, one light Rust engine. Works with MausBot.",
   "kinds": [
     "bar-widget"
   ],
