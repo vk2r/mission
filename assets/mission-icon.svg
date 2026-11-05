@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="star" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe9f5"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.5" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.46  0 0 0 0 0.65  0 0 0 0 0.80  0 0 0 0.9 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="128" cy="128" r="117.33" fill="none" stroke="#ffffff" stroke-width="17.07"/>
+  <g transform="translate(128 128) scale(14.400) translate(-12 -12)">
+    <path fill="none" stroke="#dda900" stroke-width="0.82" stroke-linejoin="round" d="M 18.12 9.53 L 18.18 9.77 L 18.17 10.04 L 18.1 10.34 L 17.96 10.65 L 17.75 10.97 L 17.48 11.31 L 17.15 11.65 L 16.76 12 L 16.32 12.35 L 15.84 12.69 L 15.31 13.03 L 14.75 13.35 L 14.15 13.66 L 13.53 13.95 L 12.9 14.23 L 12.25 14.47 L 11.61 14.69 L 10.96 14.88 L 10.33 15.04 L 9.72 15.16 L 9.13 15.25 L 8.57 15.31 L 8.05 15.33 L 7.58 15.31 L 7.15 15.25 L 6.78 15.16 L 6.46 15.04 L 6.2 14.88 L 6.01 14.69 L 5.88 14.47 L 5.82 14.23 L 5.83 13.96 L 5.9 13.66 L 6.04 13.35 L 6.25 13.03 L 6.52 12.69 L 6.85 12.35 L 7.24 12 L 7.68 11.65 L 8.16 11.31 L 8.69 10.97 L 9.25 10.65 L 9.85 10.34 L 10.47 10.05 L 11.1 9.77 L 11.75 9.53 L 12.39 9.31 L 13.04 9.12 L 13.67 8.96 L 14.28 8.84 L 14.87 8.75 L 15.43 8.69 L 15.95 8.67 L 16.42 8.69 L 16.85 8.75 L 17.22 8.84 L 17.54 8.96 L 17.8 9.12 L 17.99 9.31 Z"/>
+    <g filter="url(#glow)">
+      <path fill="url(#star)" d="M 12 8.7 Q 13.3 10.7 15.3 12 Q 13.3 13.3 12 15.3 Q 10.7 13.3 8.7 12 Q 10.7 10.7 12 8.7 Z"/>
+      <path fill="#ffffff" opacity="0.9" d="M 8.70 6.40 Q 9.17 7.13 9.90 7.60 Q 9.17 8.07 8.70 8.80 Q 8.23 8.07 7.50 7.60 Q 8.23 7.13 8.70 6.40 Z"/>
+      <path fill="#ffffff" opacity="0.9" d="M 15.40 15.20 Q 15.87 15.93 16.60 16.40 Q 15.87 16.87 15.40 17.60 Q 14.93 16.87 14.20 16.40 Q 14.93 15.93 15.40 15.20 Z"/>
+    </g>
+    <path fill="none" stroke="#dda900" stroke-width="0.82" stroke-linecap="round" d="M 17.38 11.42 L 17.03 11.77 L 16.62 12.12 L 16.17 12.46 L 15.67 12.8 L 15.13 13.14 L 14.55 13.46 L 13.95 13.76 L 13.32 14.05 L 12.68 14.31 L 12.04 14.55 L 11.39 14.76 L 10.75 14.94 L 10.13 15.08 L 9.52 15.2 L 8.94 15.28 L 8.4 15.32 L 7.89 15.32"/>
+  </g>
+</svg>

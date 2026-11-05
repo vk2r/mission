@@ -1,8 +1,5 @@
-# Mission
-
+![Mission — your AI agent team in the Omarchy bar](preview.png)
 English | [Español](README.es.md)
-
-![Mission — your AI agent team in the Omarchy bar](screenshots/home-bots-mixed.png)
 
 **Your AI agent team, its work and its spend, right in the Omarchy bar.**
 
@@ -43,11 +40,11 @@ Drop the widget from the bar if your layout kept it. The plugin creates no files
 
 The widget lives in the bar. The icon breathes softly while the team works.
 
-| | |
-| --- | --- |
-| **Left click** | Opens the team panel; another click closes it. Opening the panel also clears the alert. |
-| **Middle click** | Shows or hides the agent app's window. If the app is not running, it launches it. |
-| **Right click** | Raises and focuses the window, brings it back if it was hidden, or launches the app if it is not running. |
+|                  |                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| **Left click**   | Opens the team panel; another click closes it. Opening the panel also clears the alert.                   |
+| **Middle click** | Shows or hides the agent app's window. If the app is not running, it launches it.                         |
+| **Right click**  | Raises and focuses the window, brings it back if it was hidden, or launches the app if it is not running. |
 
 Inside the panel, **Esc** closes it (or goes back a page) and **Backspace** goes back a page.
 
@@ -70,10 +67,10 @@ Inside the panel, **Esc** closes it (or goes back a page) and **Backspace** goes
 
 ## Gallery
 
-| **Gauge** | **Gauge by model** |
-| :---: | :---: |
-| ![Gauge](screenshots/gauge.png) | ![Gauge by model](screenshots/gauge-models.png) |
-| **With the app closed** | **Without the app installed** |
+|                               **Gauge**                               |                       **Gauge by model**                        |
+| :-------------------------------------------------------------------: | :-------------------------------------------------------------: |
+|                    ![Gauge](screenshots/gauge.png)                    |         ![Gauge by model](screenshots/gauge-models.png)         |
+|                        **With the app closed**                        |                  **Without the app installed**                  |
 | ![Ready for launch, with the app closed](screenshots/home-launch.png) | ![Without the app installed](screenshots/home-notinstalled.png) |
 
 ## Privacy

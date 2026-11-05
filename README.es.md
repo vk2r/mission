@@ -1,8 +1,5 @@
-# Mission
-
-[English](README.md) | Español
-
 ![Mission — tu equipo de agentes de IA en la barra de Omarchy](screenshots/home-bots-mixed.png)
+[English](README.md) | Español
 
 **Tu equipo de agentes de IA, su trabajo y su gasto, en la barra de Omarchy.**
 
@@ -43,11 +40,11 @@ Quita el widget de la barra si tu diseño lo conservó. El plugin no crea archiv
 
 El widget vive en la barra. El icono respira suavemente mientras el equipo trabaja.
 
-| | |
-| --- | --- |
-| **Clic izquierdo** | Abre el panel del equipo; otro clic lo cierra. Abrir el panel también limpia el aviso. |
-| **Clic central** | Muestra u oculta la ventana de la app de agentes. Si la app no está corriendo, la abre. |
-| **Clic derecho** | Trae y enfoca la ventana, la recupera si estaba oculta, o abre la app si no está corriendo. |
+|                    |                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Clic izquierdo** | Abre el panel del equipo; otro clic lo cierra. Abrir el panel también limpia el aviso.      |
+| **Clic central**   | Muestra u oculta la ventana de la app de agentes. Si la app no está corriendo, la abre.     |
+| **Clic derecho**   | Trae y enfoca la ventana, la recupera si estaba oculta, o abre la app si no está corriendo. |
 
 Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelve una página.
 
@@ -70,10 +67,10 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 
 ## Galería
 
-| **Medidor** | **Medidor por modelo** |
-| :---: | :---: |
-| ![Medidor](screenshots/gauge.png) | ![Medidor por modelo](screenshots/gauge-models.png) |
-| **Con la app cerrada** | **Sin la app instalada** |
+|                               **Medidor**                               |                   **Medidor por modelo**                   |
+| :---------------------------------------------------------------------: | :--------------------------------------------------------: |
+|                    ![Medidor](screenshots/gauge.png)                    |    ![Medidor por modelo](screenshots/gauge-models.png)     |
+|                         **Con la app cerrada**                          |                  **Sin la app instalada**                  |
 | ![Listo para despegar, con la app cerrada](screenshots/home-launch.png) | ![Sin la app instalada](screenshots/home-notinstalled.png) |
 
 ## Privacidad
