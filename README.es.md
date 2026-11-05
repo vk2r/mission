@@ -1,4 +1,4 @@
-![Mission — tu equipo de agentes de IA en la barra de Omarchy](screenshots/home-bots-mixed.png)
+![Mission — tu equipo de agentes de IA en la barra de Omarchy](preview.png)
 [English](README.md) | Español
 
 **Tu equipo de agentes de IA, su trabajo y su gasto, en la barra de Omarchy.**
