@@ -187,8 +187,8 @@ scene() {
   NOFOCUS=0
   app_state installed
   case "$1" in
-    home-notinstalled) write_team 5;   write_state "";                    hypr_state closed; app_state missing; widget_cfg true false week false; PAGE=home ;;
-    settings-notinstalled) write_team 6; write_state "";                  hypr_state closed; app_state missing; widget_cfg false false week false; PAGE=settings ;;
+    home-noapp) write_team 5;   write_state "";                    hypr_state closed; app_state missing; widget_cfg true false week false; PAGE=home ;;
+    settings-noapp) write_team 6; write_state "";                  hypr_state closed; app_state missing; widget_cfg false false week false; PAGE=settings ;;
     home-launch)       write_team 5;   write_state "0:running 1:running"; hypr_state closed; widget_cfg true false week false; PAGE=home ;;
     home-bots-one)     write_team 1;   write_state "";                    hypr_state open;   widget_cfg true false week false; PAGE=home ;;
     home-bots-few)     write_team 4;   write_state "0:running 2:waiting"; hypr_state open;   widget_cfg true false week false; PAGE=home ;;
@@ -210,7 +210,7 @@ scene() {
   write_usage
 }
 
-all_scenes="home-launch home-notinstalled home-bots-one home-bots-few home-bots-mixed home-bots-many home-bots-cost home-bots-nocost home-bots-pixel home-bots-longname gauge gauge-models gauge-focus gauge-day gauge-month settings settings-notinstalled bar"
+all_scenes="home-launch home-noapp home-bots-one home-bots-few home-bots-mixed home-bots-many home-bots-cost home-bots-nocost home-bots-pixel home-bots-longname gauge gauge-models gauge-focus gauge-day gauge-month settings settings-noapp bar"
 
 swap_in() {
   [[ -x $real_engine ]] || { say "missing $real_engine (run 'mise run build')"; exit 1; }
