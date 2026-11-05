@@ -70,10 +70,12 @@ Inside the panel, **Esc** closes it (or goes back a page) and **Backspace** goes
 
 ## Gallery
 
-| | | |
-| --- | --- | --- |
-| ![Gauge](screenshots/gauge.png) | ![Gauge by model](screenshots/gauge-models.png) | ![Without the app installed](screenshots/home-notinstalled.png) |
-| **Gauge** | **Gauge by model** | **Without the app installed** |
+| | |
+| --- | --- |
+| ![Gauge](screenshots/gauge.png) | ![Gauge by model](screenshots/gauge-models.png) |
+| **Gauge** | **Gauge by model** |
+| ![Ready for launch, with the app closed](screenshots/home-launch.png) | ![Without the app installed](screenshots/home-notinstalled.png) |
+| **With the app closed** | **Without the app installed** |
 
 ## Privacy
 

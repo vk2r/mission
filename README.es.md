@@ -70,10 +70,12 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 
 ## Galería
 
-| | | |
-| --- | --- | --- |
-| ![Medidor](screenshots/gauge.png) | ![Medidor por modelo](screenshots/gauge-models.png) | ![Sin la app instalada](screenshots/home-notinstalled.png) |
-| **Medidor** | **Medidor por modelo** | **Sin la app instalada** |
+| | |
+| --- | --- |
+| ![Medidor](screenshots/gauge.png) | ![Medidor por modelo](screenshots/gauge-models.png) |
+| **Medidor** | **Medidor por modelo** |
+| ![Listo para despegar, con la app cerrada](screenshots/home-launch.png) | ![Sin la app instalada](screenshots/home-notinstalled.png) |
+| **Con la app cerrada** | **Sin la app instalada** |
 
 ## Privacidad
 
