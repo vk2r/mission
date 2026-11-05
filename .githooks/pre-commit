@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+generated=(bin/engine bin/SHA256SUMS bin/provenance.sigstore.json)
+changed="$(git diff --cached --name-only -- "${generated[@]}")"
+[[ -z $changed ]] && exit 0
+
+echo "pre-commit: bin/engine is built and committed by GitHub Actions, not by hand:" >&2
+while IFS= read -r file; do echo "  $file" >&2; done <<<"$changed"
+echo "Drop them with: git restore --staged --worktree bin/engine" >&2
+exit 1

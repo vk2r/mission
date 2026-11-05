@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/verify-binaries.yml
+
+  release:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            bin/engine bin/SHA256SUMS bin/provenance.sigstore.json \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Engine built by .github/workflows/build-engine.yml and verified against its build provenance (provenance.sigstore.json). Verify with: gh attestation verify engine --repo $GITHUB_REPOSITORY --bundle provenance.sigstore.json"

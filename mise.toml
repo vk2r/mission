@@ -43,3 +43,7 @@ run = "bin/engine --once | jq ."
 [tasks.validate]
 description = "Validate the plugin manifest"
 run = "omarchy plugin validate ."
+
+[tasks.publish]
+description = "Push main to GitHub, wait for the signed binary commit, then push the same history to Forgejo"
+run = "scripts/publish.sh"

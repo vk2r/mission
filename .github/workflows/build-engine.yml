@@ -1,0 +1,89 @@
+name: Build engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "engine/**"
+      - "mise.toml"
+      - "scripts/build-engine.sh"
+      - ".github/workflows/build-engine.yml"
+
+concurrency:
+  group: build-engine
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          install: true
+          cache: false
+
+      - name: Build
+        run: mise run build
+
+      - name: Audit dependencies
+        run: mise run audit
+
+      - name: Test
+        run: mise run test
+
+      - name: Checksums
+        run: cd bin && sha256sum engine | tee SHA256SUMS
+
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: bin/engine
+
+      - name: Keep the signed attestation
+        run: cp "${{ steps.attest.outputs.bundle-path }}" bin/provenance.sigstore.json
+
+      - name: Commit binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          artifacts=(bin/engine bin/SHA256SUMS bin/provenance.sigstore.json)
+          stash="$RUNNER_TEMP/artifacts"
+          mkdir -p "$stash"
+          cp "${artifacts[@]}" "$stash/"
+          # Put the binary on top of the newest main instead of rebasing: two pushes
+          # during one build would otherwise conflict on the attestation bundle.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$stash"/* bin/
+            git add "${artifacts[@]}"
+            if git diff --cached --quiet; then
+              echo "Binary unchanged."
+              exit 0
+            fi
+            git commit -m "🤖 build bin/engine from ${GITHUB_SHA::7}" \
+              -m "Built by .github/workflows/build-engine.yml (run $GITHUB_RUN_ID) from $GITHUB_SHA."
+            if git push origin HEAD:main; then
+              gh workflow run verify-binaries.yml --ref main
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), retrying on the newest main."
+            sleep $((attempt * 3))
+          done
+          echo "Could not push the binary after 5 attempts." >&2
+          exit 1
