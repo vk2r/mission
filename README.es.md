@@ -71,7 +71,7 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 ## Galería
 
 | **Medidor** | **Medidor por modelo** |
-| --- | --- |
+| :---: | :---: |
 | ![Medidor](screenshots/gauge.png) | ![Medidor por modelo](screenshots/gauge-models.png) |
 | **Con la app cerrada** | **Sin la app instalada** |
 | ![Listo para despegar, con la app cerrada](screenshots/home-launch.png) | ![Sin la app instalada](screenshots/home-notinstalled.png) |
