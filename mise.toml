@@ -45,17 +45,9 @@ run = "bin/engine --once | jq ."
 description = "Validate the plugin manifest"
 run = "omarchy plugin validate ."
 
-[tasks."preview:png"]
-description = "Render preview.png (marketplace still) from assets/presentation.pptx"
-run = "uv run --script scripts/make-preview-png.py"
-
-[tasks."preview:webp"]
-description = "Render preview.webp (README, with the animated crew) from assets/presentation.pptx"
-run = "uv run --script scripts/make-preview-webp.py"
-
 [tasks.preview]
-description = "Render preview.png and preview.webp from assets/presentation.pptx"
-depends = ["preview:png", "preview:webp"]
+description = "Render preview.png (marketplace still) and preview.webp (README, with the animated crew) from assets/presentation.pptx"
+run = "uv run --script scripts/make-preview.py"
 
 [tasks.publish]
 description = "Push main to GitHub, wait for the signed binary commit, then push the same history to Forgejo"
