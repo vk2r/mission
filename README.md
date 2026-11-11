@@ -1,4 +1,4 @@
-![Mission — your AI agent team in the Omarchy bar](preview.png)
+![Mission — your AI agent team in the Omarchy bar](preview.webp)
 English | [Español](README.es.md)
 
 **Your AI agent team, its work and its spend, right in the Omarchy bar.**
@@ -12,6 +12,8 @@ MausBot only builds a system tray on Windows, so on Linux its window has no way 
 ## Features
 
 - **The whole team at a glance** — one row per bot with its state (working, waiting, idle, cancelled, failed) and the task it is on, drawn like the app's own team map: the chief on a card of its own, the team below it, each bot wearing the mascot you gave it in the app.
+- **Animated** — several animations in real time: while the team works, the orbit in the bar icon and in the panel's mark turns in 3D round its star, and each bot's mascot moves with its state, in pixel mode too.
+- **Floating panel** — pop the panel out of the bar into a card that stays on screen while you work, on any monitor, at the size you like.
 - **The team's spend** — for today, the last 7 days or the last 30, in one sentence on the panel footer and on a Gauge page with a sparkline, a split bar and a list by bot or by model.
 - **Notifications** — when a bot answers another bot, a desktop notification carries the first line of the turn, and the icon lets you know something new is waiting.
 - **The app window, one click away** — show or hide the agent app with a middle click, raise or launch it with a right click.
@@ -39,7 +41,9 @@ Drop the widget from the bar if your layout kept it. The plugin creates no files
 
 ## Usage
 
-The widget lives in the bar. While the team works, the two small stars in the icon circle the central one, staying upright, and the orbit the other; the mark in the panel's header turns too, at half the pace.
+The widget lives in the bar. While the team works, the two small stars in the icon circle the central one, staying upright, and the orbit turns in depth round it, opening into a full circle and closing to a line; the mark in the panel's header turns too, at half the pace, and the mascots of the bots at work move.
+
+![The bar icon, the panel's mark and the mascots while the team works](screenshots/motion.webp)
 
 |                  |                                                                                                           |
 | ---------------- | --------------------------------------------------------------------------------------------------------- |
@@ -58,6 +62,8 @@ Inside the panel, **Esc** closes it (or goes back a page) and **Backspace** goes
 ### Floating panel
 
 The button beside the gear pops the panel out of the bar into a floating card that stays on screen while you work. Drag it by its header (drop it on another monitor to move it there), resize it from the corner, and use the same button, which turns into a dock icon, to put it back; while it is floating, a click on the bar icon shows or hides it. Mission remembers whether it was floating, and where, across shell restarts. It is a layer-shell surface, so Hyprland never tiles it and no Hyprland setting changes.
+
+![The panel floating over the desktop](screenshots/floating.png)
 
 ### Settings
 

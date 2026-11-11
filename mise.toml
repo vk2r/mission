@@ -2,6 +2,7 @@
 rust = "1.98.0"
 "aqua:EmbarkStudios/cargo-deny" = "0.20.2"
 "github:EmbarkStudios/cargo-about" = "0.9.2"
+uv = "0.13.7"
 
 [env]
 CARGO_TARGET_DIR = "{{env.HOME}}/.cache/openmausbot-engine/target"
@@ -13,11 +14,11 @@ run = "scripts/build-engine.sh"
 [tasks.test]
 description = "Run the engine's unit and integration tests and the translation check"
 run = [
-  "cargo test --locked --manifest-path engine/Cargo.toml",
-  "node scripts/check-i18n.mjs",
-  "node scripts/check-motion.mjs",
-  "node scripts/check-settings.mjs",
-  "scripts/check-silent.sh",
+    "cargo test --locked --manifest-path engine/Cargo.toml",
+    "node scripts/check-i18n.mjs",
+    "node scripts/check-motion.mjs",
+    "node scripts/check-settings.mjs",
+    "scripts/check-silent.sh",
 ]
 
 [tasks.i18n]
@@ -43,6 +44,18 @@ run = "bin/engine --once | jq ."
 [tasks.validate]
 description = "Validate the plugin manifest"
 run = "omarchy plugin validate ."
+
+[tasks."preview:png"]
+description = "Render preview.png (marketplace still) from assets/presentation.pptx"
+run = "uv run --script scripts/make-preview-png.py"
+
+[tasks."preview:webp"]
+description = "Render preview.webp (README, with the animated crew) from assets/presentation.pptx"
+run = "uv run --script scripts/make-preview-webp.py"
+
+[tasks.preview]
+description = "Render preview.png and preview.webp from assets/presentation.pptx"
+depends = ["preview:png", "preview:webp"]
 
 [tasks.publish]
 description = "Push main to GitHub, wait for the signed binary commit, then push the same history to Forgejo"

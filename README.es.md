@@ -1,4 +1,4 @@
-![Mission — tu equipo de agentes de IA en la barra de Omarchy](preview.png)
+![Mission — tu equipo de agentes de IA en la barra de Omarchy](preview.webp)
 [English](README.md) | Español
 
 **Tu equipo de agentes de IA, su trabajo y su gasto, en la barra de Omarchy.**
@@ -12,6 +12,8 @@ MausBot solo crea una bandeja del sistema en Windows, así que en Linux su venta
 ## Funciones
 
 - **Todo el equipo de un vistazo** — una fila por bot con su estado (trabajando, esperando, inactivo, cancelado, fallido) y la tarea que lleva, dibujado como el mapa de equipo de la propia app: el jefe en una tarjeta propia, el equipo debajo, cada bot con la mascota que le pusiste en la app.
+- **Animado** — varias animaciones en tiempo real: mientras el equipo trabaja, la órbita del icono de la barra y de la marca del panel gira en 3D alrededor de su estrella, y la mascota de cada bot se mueve según su estado, también en modo pixelado.
+- **Panel flotante** — desacopla el panel de la barra en una tarjeta que se queda en pantalla mientras trabajas, en cualquier monitor y del tamaño que quieras.
 - **El gasto del equipo** — de hoy, de los últimos 7 días o de los últimos 30, en una frase en el pie del panel y en una página Medidor con una línea de tendencia, una barra dividida y una lista por bot o por modelo.
 - **Notificaciones** — cuando un bot responde a otro, una notificación de escritorio lleva la primera línea del turno, y el icono avisa de que hay algo nuevo esperando.
 - **La ventana de la app, a un clic** — muestra u oculta la app de agentes con un clic central, tráela al frente o ábrela con un clic derecho.
@@ -39,7 +41,9 @@ Quita el widget de la barra si tu diseño lo conservó. El plugin no crea archiv
 
 ## Uso
 
-El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas pequeñas del icono dan vueltas alrededor de la central, sin girar sobre sí mismas, y la órbita hacia el otro; la marca de la cabecera del panel también gira, a la mitad de ritmo.
+El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas pequeñas del icono dan vueltas alrededor de la central, sin girar sobre sí mismas, y la órbita gira en profundidad a su alrededor, abriéndose en un círculo completo y cerrándose en una línea; la marca de la cabecera del panel también gira, a la mitad de ritmo, y las mascotas de los bots que trabajan se mueven.
+
+![El icono de la barra, la marca del panel y las mascotas mientras el equipo trabaja](screenshots/motion.webp)
 
 |                    |                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------- |
@@ -58,6 +62,8 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 ### Panel flotante
 
 El botón junto al engranaje desacopla el panel de la barra y lo deja como una tarjeta flotante que se queda en pantalla mientras trabajas. Se arrastra desde su cabecera (si la sueltas en otro monitor, se pasa a ese monitor), se redimensiona desde la esquina y el mismo botón, que cambia a un ícono de acoplar, lo devuelve a la barra; mientras flota, un clic en el ícono de la barra lo muestra u oculta. Mission recuerda si estaba flotando y dónde, aunque reinicies el shell. Es una superficie layer-shell: Hyprland nunca la pone en mosaico y no hay que tocar su configuración.
+
+![El panel flotando sobre el escritorio](screenshots/floating.png)
 
 ### Ajustes
 
