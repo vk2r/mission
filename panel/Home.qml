@@ -88,55 +88,26 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Style.space(12)
 
-        // Same three layers as the bar mark: stars one way, orbit the other.
-        Item {
+        // Same layers as the bar mark, at half its pace.
+        MissionMark {
           id: mark
           anchors.verticalCenter: parent.verticalCenter
           width: Style.space(32)
           height: width
-          readonly property real angle: page.host.motionOn ? page.host.slowSpin : 0
+          artwork: "mission-mark-hero"
+          angle: page.host.motionOn ? page.host.slowSpin : 0
+          viewSize: 48
+          starA: Qt.point(-8.91, -11.88)
+          starB: Qt.point(9.18, 11.88)
+          ring: true
+          breathe: true
+          orbit: ({ rx: 17.82, ry: 6.48, stroke: 2.214, tilt: 158, start: -142, sweep: 102.1 })
           opacity: page.markIn
           transform: Scale {
             xScale: 0.85 + 0.15 * page.markIn
             yScale: 0.85 + 0.15 * page.markIn
             origin.x: mark.width / 2
             origin.y: mark.height / 2
-          }
-
-          BrandIcon {
-            anchors.fill: parent
-            artworkFile: Qt.resolvedUrl("../assets/mission-mark-hero-orbit-back.svg")
-            tint: Color.foreground
-            rotation: -mark.angle
-          }
-          BrandIcon {
-            anchors.fill: parent
-            artworkFile: Qt.resolvedUrl("../assets/mission-mark-hero-star-core.svg")
-            tint: Color.foreground
-          }
-          OrbitStar {
-            anchors.fill: parent
-            artworkFile: Qt.resolvedUrl("../assets/mission-mark-hero-star-a.svg")
-            tint: Color.foreground
-            angle: mark.angle
-            viewSize: 48
-            offsetX: -8.91
-            offsetY: -11.88
-          }
-          OrbitStar {
-            anchors.fill: parent
-            artworkFile: Qt.resolvedUrl("../assets/mission-mark-hero-star-b.svg")
-            tint: Color.foreground
-            angle: mark.angle
-            viewSize: 48
-            offsetX: 9.18
-            offsetY: 11.88
-          }
-          BrandIcon {
-            anchors.fill: parent
-            artworkFile: Qt.resolvedUrl("../assets/mission-mark-hero-orbit-front.svg")
-            tint: Color.foreground
-            rotation: -mark.angle
           }
         }
 

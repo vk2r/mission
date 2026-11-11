@@ -198,7 +198,8 @@ Panel {
   property string page: "home"
   readonly property bool showingHome: root.page === "home"
 
-  function goTo(name) { root.page = String(name) }
+  // Only the panel's own pages; anything else (say from IPC) falls back home.
+  function goTo(name) { root.page = ["home", "costs", "settings"].indexOf(String(name)) >= 0 ? String(name) : "home" }
 
   function refresh() {
     EngineHub.refresh()

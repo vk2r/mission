@@ -86,8 +86,11 @@ Scope {
   }
 
   function number(key, fallback) {
-    var stored = Number(hub.setting(key, fallback))
-    return isFinite(stored) ? stored : fallback
+    var raw = hub.setting(key, fallback)
+    // null, arrays or booleans in a hand-edited file are not numbers.
+    if (typeof raw !== "number" && typeof raw !== "string") return fallback
+    var stored = Number(raw)
+    return raw !== "" && isFinite(stored) ? stored : fallback
   }
 
   function choice(key, allowed, fallback) {
@@ -151,16 +154,20 @@ Scope {
   // The bar mark's star angle, one clock for every monitor so both bars turn
   // together. A turn always runs to a full revolution, so the stars come to
   // rest where they started instead of freezing mid-way when the team stops.
+  // Neither clock runs for a bar whose animations are off: an idle clock would
+  // still wake the render loop every frame for nothing.
   property real spin: 0
-  readonly property bool spinWanted: hub.teamBusy && hub.consumers.length > 0
-  onSpinWantedChanged: {
-    if (spinWanted && !turn.running) turn.start()
-    if (spinWanted && !slowTurn.running) slowTurn.start()
-  }
+  readonly property bool spinWanted: hub.teamBusy
+    && hub.consumers.some(function (w) { return w.motionOn })
+  onSpinWantedChanged: if (spinWanted && !turn.running) turn.start()
   // The panel header's mark is larger and stays in view while the card floats,
   // so it turns at half the pace on its own clock; a full revolution of its own
-  // is what brings it back to the resting mark.
+  // is what brings it back to the resting mark. It only runs while a panel is
+  // actually showing, docked or floating.
   property real slowSpin: 0
+  readonly property bool slowSpinWanted: hub.teamBusy
+    && hub.consumers.some(function (w) { return w.motionOn && w.markInView })
+  onSlowSpinWantedChanged: if (slowSpinWanted && !slowTurn.running) slowTurn.start()
 
   property var consumers: []
 
@@ -338,7 +345,7 @@ Scope {
     duration: 10000
     onFinished: {
       hub.slowSpin = 0
-      if (hub.spinWanted) slowTurn.start()
+      if (hub.slowSpinWanted) slowTurn.start()
     }
   }
 }
