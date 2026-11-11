@@ -60,6 +60,8 @@ var STRINGS = {
     "costsTotal": "Totaal",
     "noActivity": "Nog geen teamactiviteit",
     "settings": "Instellingen",
+    "popOut": "Losmaken als zwevend venster",
+    "dockTip": "Weer vastzetten aan de balk",
     "backTip": "Terug (Backspace, Esc)",
     "language": "Taal",
     "systemLanguage": "Automatisch ({0})",

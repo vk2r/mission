@@ -25,7 +25,7 @@ Item {
     && (rowItem.panel.teams.length > 1
       ? rowItem.panel.teamWorking(rowItem.modelData ? rowItem.modelData.department : "")
       : rowItem.panel.hostWidget.teamBusy === true)
-  readonly property bool animating: rowItem.panel !== null && rowItem.panel.opened === true
+  readonly property bool animating: rowItem.panel !== null && rowItem.panel.surfaceOpen === true
     && (rowItem.working || rowItem.status === "waiting" || rowItem.leading || rowItem.face === "notifying")
   property real faceStart: Date.now()
   onFaceChanged: { rowItem.faceStart = Date.now(); rowItem.variant = 0 }

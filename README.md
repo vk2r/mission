@@ -39,7 +39,7 @@ Drop the widget from the bar if your layout kept it. The plugin creates no files
 
 ## Usage
 
-The widget lives in the bar. The icon breathes softly while the team works.
+The widget lives in the bar. While the team works, the two small stars in the icon circle the central one, staying upright, and the orbit the other; the mark in the panel's header turns too, at half the pace.
 
 |                  |                                                                                                           |
 | ---------------- | --------------------------------------------------------------------------------------------------------- |
@@ -54,6 +54,10 @@ Inside the panel, **Esc** closes it (or goes back a page) and **Backspace** goes
 - **Home** — the team page: the chief on a card of its own at the top, the team it coordinates below, each row with its mascot, state dot and current task. The footer says what the team spent in the chosen period — `$34.44 TODAY · 71 TASKS` — with a **Gauge** button beside it.
 - **Gauge** — the spend of the chosen period: the total with a sparkline, a bar that splits it by bot or by model, and the list behind each slice. The period dropdown is shared with Settings, so changing it in one place changes the other.
 - **Settings** — behind the gear in the header.
+
+### Floating panel
+
+The button beside the gear pops the panel out of the bar into a floating card that stays on screen while you work. Drag it by its header (drop it on another monitor to move it there), resize it from the corner, and use the same button, which turns into a dock icon, to put it back; while it is floating, a click on the bar icon shows or hides it. Mission remembers whether it was floating, and where, across shell restarts. It is a layer-shell surface, so Hyprland never tiles it and no Hyprland setting changes.
 
 ### Settings
 

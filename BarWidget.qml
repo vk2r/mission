@@ -14,7 +14,8 @@ BarWidget {
   readonly property string state: EngineHub.state
   readonly property bool alerting: EngineHub.alerting
   readonly property bool teamBusy: EngineHub.teamBusy
-  readonly property real glow: EngineHub.phase
+  readonly property real spin: EngineHub.spin
+  readonly property bool motionOn: root.bar ? root.bar.foregroundAnimationEnabled !== false : true
 
   readonly property bool windowVisible: root.state === "visible"
 
@@ -87,6 +88,8 @@ BarWidget {
       panel.item.open()
       panel.item.goTo(name)
     }
+    function popout(): void { if (panel.item) panel.item.popOut() }
+    function dock(): void { if (panel.item) panel.item.dock() }
     function show(): void { root.run("show") }
     function hide(): void { root.run("hide") }
     function refresh(): void {
@@ -98,6 +101,7 @@ BarWidget {
         state: root.state,
         alert: root.alerting,
         panel: root.opened,
+        floating: panel.item ? panel.item.floatActive === true : false,
         busy: root.teamBusy
       })
     }
@@ -112,9 +116,8 @@ BarWidget {
   }
 
   Item {
-    id: pulse
+    id: holder
     anchors.fill: parent
-    opacity: root.teamBusy ? 0.25 + root.glow * 0.75 : 1
 
     BarIconButton {
       id: button
@@ -139,15 +142,59 @@ BarWidget {
       }
     }
 
-    BrandIcon {
+    // The mark in three layers: the far half of the orbit, the stars, and the
+    // near half. The stars turn one way and both halves of the orbit the other,
+    // so the orbit still passes in front of the stars and behind them; a full
+    // revolution brings all three back to the resting mark.
+    Item {
+      id: mark
       width: root.markSize
       height: root.markSize
       readonly property real ratio: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
       x: Math.round((button.width - width) / 2 * ratio) / ratio
       y: Math.round((button.height - height) / 2 * ratio) / ratio
       scale: button.pressScale
-      tint: root.windowVisible ? Color.foreground : Qt.alpha(Color.foreground, 0.45)
-      accent: root.windowVisible ? Color.accent : Qt.alpha(Color.accent, 0.45)
+      readonly property color tint: root.windowVisible ? Color.foreground : Qt.alpha(Color.foreground, 0.45)
+      readonly property color accent: root.windowVisible ? Color.accent : Qt.alpha(Color.accent, 0.45)
+
+      BrandIcon {
+        anchors.fill: parent
+        artworkFile: Qt.resolvedUrl("assets/mission-mark-orbit-back.svg")
+        tint: mark.tint
+        accent: mark.accent
+        rotation: root.motionOn ? -root.spin : 0
+      }
+      BrandIcon {
+        anchors.fill: parent
+        artworkFile: Qt.resolvedUrl("assets/mission-mark-star-core.svg")
+        tint: mark.tint
+        accent: mark.accent
+      }
+      OrbitStar {
+        anchors.fill: parent
+        artworkFile: Qt.resolvedUrl("assets/mission-mark-star-a.svg")
+        tint: mark.tint
+        accent: mark.accent
+        angle: root.motionOn ? root.spin : 0
+        offsetX: -3.534
+        offsetY: -4.712
+      }
+      OrbitStar {
+        anchors.fill: parent
+        artworkFile: Qt.resolvedUrl("assets/mission-mark-star-b.svg")
+        tint: mark.tint
+        accent: mark.accent
+        angle: root.motionOn ? root.spin : 0
+        offsetX: 3.643
+        offsetY: 4.712
+      }
+      BrandIcon {
+        anchors.fill: parent
+        artworkFile: Qt.resolvedUrl("assets/mission-mark-orbit-front.svg")
+        tint: mark.tint
+        accent: mark.accent
+        rotation: root.motionOn ? -root.spin : 0
+      }
     }
   }
 

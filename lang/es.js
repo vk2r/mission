@@ -60,6 +60,8 @@ var STRINGS = {
     "costsTotal": "Total",
     "noActivity": "Aún no hay actividad del equipo",
     "settings": "Ajustes",
+    "popOut": "Desacoplar como ventana flotante",
+    "dockTip": "Acoplar de nuevo a la barra",
     "backTip": "Volver (Backspace, Esc)",
     "language": "Idioma",
     "systemLanguage": "Automático ({0})",

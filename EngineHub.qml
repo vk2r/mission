@@ -85,6 +85,11 @@ Scope {
     return ["true", "1", "yes", "on"].indexOf(stored) >= 0
   }
 
+  function number(key, fallback) {
+    var stored = Number(hub.setting(key, fallback))
+    return isFinite(stored) ? stored : fallback
+  }
+
   function choice(key, allowed, fallback) {
     var stored = String(hub.setting(key, fallback))
     return allowed.indexOf(stored) >= 0 ? stored : fallback
@@ -109,6 +114,13 @@ Scope {
   readonly property bool showCost: hub.flag("showCost", false)
   readonly property bool pixelAvatars: hub.flag("pixelAvatars", false)
   readonly property bool autoLaunch: hub.flag("autoLaunch", false)
+  readonly property bool floating: hub.flag("floating", false)
+  readonly property string floatScreen: String(hub.setting("floatScreen", ""))
+  readonly property real floatX: hub.number("floatX", -1)
+  readonly property real floatY: hub.number("floatY", -1)
+  readonly property real floatW: hub.number("floatW", -1)
+  readonly property real floatH: hub.number("floatH", -1)
+  property bool floatHidden: false
   readonly property string costRange: hub.choice("costRange", ["day", "week", "month"], "day")
   readonly property string costGroup: hub.choice("costGroup", ["bot", "model"], "bot")
 
@@ -136,7 +148,19 @@ Scope {
 
   readonly property var costs: hub.snapshot && hub.snapshot.costs ? hub.snapshot.costs : null
 
-  property real phase: 0
+  // The bar mark's star angle, one clock for every monitor so both bars turn
+  // together. A turn always runs to a full revolution, so the stars come to
+  // rest where they started instead of freezing mid-way when the team stops.
+  property real spin: 0
+  readonly property bool spinWanted: hub.teamBusy && hub.consumers.length > 0
+  onSpinWantedChanged: {
+    if (spinWanted && !turn.running) turn.start()
+    if (spinWanted && !slowTurn.running) slowTurn.start()
+  }
+  // The panel header's mark is larger and stays in view while the card floats,
+  // so it turns at half the pace on its own clock; a full revolution of its own
+  // is what brings it back to the resting mark.
+  property real slowSpin: 0
 
   property var consumers: []
 
@@ -292,11 +316,29 @@ Scope {
     }
   }
 
-  SequentialAnimation on phase {
-    running: hub.teamBusy && hub.consumers.length > 0
-    loops: Animation.Infinite
-    NumberAnimation { to: 1; duration: 650; easing.type: Easing.InOutSine }
-    NumberAnimation { to: 0; duration: 650; easing.type: Easing.InOutSine }
-    onStopped: hub.phase = 0
+  NumberAnimation {
+    id: turn
+    target: hub
+    property: "spin"
+    from: 0
+    to: 360
+    duration: 5000
+    onFinished: {
+      hub.spin = 0
+      if (hub.spinWanted) turn.start()
+    }
+  }
+
+  NumberAnimation {
+    id: slowTurn
+    target: hub
+    property: "slowSpin"
+    from: 0
+    to: 360
+    duration: 10000
+    onFinished: {
+      hub.slowSpin = 0
+      if (hub.spinWanted) slowTurn.start()
+    }
   }
 }

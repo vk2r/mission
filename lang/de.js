@@ -60,6 +60,8 @@ var STRINGS = {
     "costsTotal": "Gesamt",
     "noActivity": "Noch keine Team-Aktivität",
     "settings": "Einstellungen",
+    "popOut": "Als schwebendes Fenster lösen",
+    "dockTip": "Wieder an die Leiste andocken",
     "backTip": "Zurück (Backspace, Esc)",
     "language": "Sprache",
     "systemLanguage": "Automatisch ({0})",

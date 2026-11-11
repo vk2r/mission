@@ -39,7 +39,7 @@ Quita el widget de la barra si tu diseño lo conservó. El plugin no crea archiv
 
 ## Uso
 
-El widget vive en la barra. El icono respira suavemente mientras el equipo trabaja.
+El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas pequeñas del icono dan vueltas alrededor de la central, sin girar sobre sí mismas, y la órbita hacia el otro; la marca de la cabecera del panel también gira, a la mitad de ritmo.
 
 |                    |                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------- |
@@ -54,6 +54,10 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 - **Inicio** — la página del equipo: el jefe en una tarjeta propia arriba, el equipo que coordina debajo, cada fila con su mascota, su punto de estado y su tarea actual. El pie dice lo que gastó el equipo en el período elegido — `$34.44 HOY · 71 TAREAS` — con un botón **Medidor** al lado.
 - **Medidor** — el gasto del período elegido: el total con una línea de tendencia, una barra que lo divide por bot o por modelo, y la lista detrás de cada porción. El selector de período se comparte con Ajustes, así que cambiarlo en un lugar lo cambia en el otro.
 - **Ajustes** — tras el engranaje en la cabecera.
+
+### Panel flotante
+
+El botón junto al engranaje desacopla el panel de la barra y lo deja como una tarjeta flotante que se queda en pantalla mientras trabajas. Se arrastra desde su cabecera (si la sueltas en otro monitor, se pasa a ese monitor), se redimensiona desde la esquina y el mismo botón, que cambia a un ícono de acoplar, lo devuelve a la barra; mientras flota, un clic en el ícono de la barra lo muestra u oculta. Mission recuerda si estaba flotando y dónde, aunque reinicies el shell. Es una superficie layer-shell: Hyprland nunca la pone en mosaico y no hay que tocar su configuración.
 
 ### Ajustes
 

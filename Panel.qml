@@ -7,6 +7,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "lang/index.js" as I18n
 import "panel"
+import "components"
 
 Panel {
   id: root
@@ -27,6 +28,7 @@ Panel {
   function save(key, value, fallback) { EngineHub.save(key, value, fallback) }
   readonly property var costs: EngineHub.costs
   readonly property string costRange: EngineHub.costRange
+  readonly property real slowSpin: EngineHub.slowSpin
   readonly property string costGroup: EngineHub.costGroup
   readonly property bool showCost: EngineHub.showCost
   readonly property bool pixelAvatars: EngineHub.pixelAvatars
@@ -202,41 +204,99 @@ Panel {
     EngineHub.refresh()
   }
 
+  readonly property bool floating: EngineHub.floating
+  readonly property real floatX: EngineHub.floatX
+  readonly property real floatY: EngineHub.floatY
+  readonly property real floatW: EngineHub.floatW
+  readonly property real floatH: EngineHub.floatH
+  readonly property string homeScreenName: popup.screen ? popup.screen.name : ""
+  readonly property bool ownsFloat: {
+    var names = []
+    for (var i = 0; i < Quickshell.screens.length; ++i) names.push(Quickshell.screens[i].name)
+    var want = EngineHub.floatScreen
+    if (want !== "" && names.indexOf(want) >= 0) return root.homeScreenName === want
+    return names.length > 0 && root.homeScreenName === names[0]
+  }
+  readonly property bool floatActive: root.floating && !EngineHub.floatHidden && root.ownsFloat
+  readonly property bool surfaceOpen: root.floating ? root.floatActive : root.opened
+
   function open() {
-    root.controller.show()
+    if (root.floating) EngineHub.floatHidden = false
+    else root.controller.show()
     if (EngineHub.alerting === true) EngineHub.ack()
     root.refresh()
     if (root.autoLaunch && EngineHub.ready) root.launchApp()
   }
 
   function close() {
+    if (root.floating) {
+      EngineHub.floatHidden = true
+      return
+    }
     root.controller.hide()
     root.page = "home"
   }
 
   function toggle() {
-    if (root.opened) root.close()
+    if (root.surfaceOpen || (root.floating && !EngineHub.floatHidden)) root.close()
     else root.open()
   }
 
-  KeyboardPanel {
-    id: popup
-    anchorItem: root.anchorItem
-    owner: root.barIdentity
-    bar: root.bar
-    open: root.opened
-    focusTarget: keyCatcher
-    contentWidth: popup.fittedContentWidth(Style.space(400))
-    contentHeight: popup.fittedContentHeight(
-      root.page === "costs" ? costsPage.implicitHeight : homeView.implicitHeight,
-      root.maxCardHeight)
+  function popOut() {
+    var card = popup.cardOrigin
+    if (EngineHub.floatX < 0 || EngineHub.floatY < 0) {
+      EngineHub.save("floatX", card.x, -1)
+      EngineHub.save("floatY", card.y, -1)
+    }
+    EngineHub.save("floatScreen", root.homeScreenName, "")
+    root.controller.hide()
+    EngineHub.floatHidden = false
+    EngineHub.save("floating", true, false)
+  }
 
+  function floatDragStart(x, y) { floatCard.dragStart(x, y) }
+  function floatDragMove(x, y) { floatCard.dragMove(x, y) }
+  function floatDragEnd() { floatCard.dragEnd() }
+
+  function dock() {
+    EngineHub.save("floating", false, false)
+    EngineHub.floatHidden = false
+  }
+
+  FileView {
+    id: manifestFile
+    path: Qt.resolvedUrl("manifest.json").toString().replace(/^file:\/\//, "")
+    printErrors: false
+    onLoaded: {
+      try { root.version = JSON.parse(manifestFile.text()).version || "" } catch (e) { root.version = "" }
+    }
+  }
+  property string version: ""
+
+  FileView {
+    id: themeColors
+    path: Commons.Color.currentThemePath + "/colors.toml"
+    printErrors: false
+    onLoaded: {
+      var match = String(text()).match(/^\s*red\s*=\s*["']?(#[0-9A-Fa-f]{6})/m)
+      root.themeRed = match ? match[1] : ""
+    }
+  }
+
+  Connections {
+    target: Commons.Color
+    function onAccentChanged() { themeColors.reload() }
+  }
+
+  Component {
+    id: panelBody
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      readonly property real wanted: root.page === "costs" ? costsPage.implicitHeight : homeView.implicitHeight
       onCloseRequested: {
         if (!root.showingHome) root.page = "home"
-        else root.close()
+        else if (!root.floating) root.close()
       }
       onTextKey: function(text) {
         if (text === "\b" && !root.showingHome) root.page = "home"
@@ -288,20 +348,12 @@ Panel {
         }
       }
 
-      FileView {
-        id: manifestFile
-        path: Qt.resolvedUrl("manifest.json").toString().replace(/^file:\/\//, "")
-        printErrors: false
-        onLoaded: {
-          try { versionFooter.text = JSON.parse(manifestFile.text()).version || "" } catch (e) { versionFooter.text = "" }
-        }
-      }
-
       Text {
         id: versionFooter
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        text: root.version
         visible: root.page === "settings" && text !== ""
         horizontalAlignment: Text.AlignHCenter
         textFormat: Text.PlainText
@@ -309,21 +361,32 @@ Panel {
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }
-
-      FileView {
-        id: themeColors
-        path: Commons.Color.currentThemePath + "/colors.toml"
-        printErrors: false
-        onLoaded: {
-          var match = String(text()).match(/^\s*red\s*=\s*["']?(#[0-9A-Fa-f]{6})/m)
-          root.themeRed = match ? match[1] : ""
-        }
-      }
-
-      Connections {
-        target: Commons.Color
-        function onAccentChanged() { themeColors.reload() }
-      }
     }
+  }
+
+  KeyboardPanel {
+    id: popup
+    anchorItem: root.anchorItem
+    owner: root.barIdentity
+    bar: root.bar
+    open: root.opened && !root.floating
+    focusTarget: popupBody.item
+    contentWidth: popup.fittedContentWidth(Style.space(400))
+    contentHeight: popup.fittedContentHeight(popupBody.item ? popupBody.item.wanted : 0, root.maxCardHeight)
+
+    Loader {
+      id: popupBody
+      anchors.fill: parent
+      active: !root.floating
+      sourceComponent: panelBody
+    }
+  }
+
+  FloatingPanel {
+    id: floatCard
+    host: root
+    screen: popup.screen
+    shown: root.floatActive
+    body: panelBody
   }
 }

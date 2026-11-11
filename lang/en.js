@@ -60,6 +60,8 @@ var STRINGS = {
     "costsTotal": "Total",
     "noActivity": "No team activity yet",
     "settings": "Settings",
+    "popOut": "Pop out as floating window",
+    "dockTip": "Dock back to the bar",
     "backTip": "Back (Backspace, Esc)",
     "language": "Language",
     "systemLanguage": "Automatic ({0})",

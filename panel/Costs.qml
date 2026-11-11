@@ -186,6 +186,11 @@ Item {
       implicitHeight: Math.max(headerLeft.implicitHeight, headerControls.implicitHeight)
       height: implicitHeight
 
+      FloatDrag {
+        anchors.fill: parent
+        host: page.host
+      }
+
       Row {
         id: headerLeft
 

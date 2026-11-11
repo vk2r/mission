@@ -60,6 +60,8 @@ var STRINGS = {
     "costsTotal": "Total",
     "noActivity": "Pas encore d'activité dans l'équipe",
     "settings": "Réglages",
+    "popOut": "Détacher en fenêtre flottante",
+    "dockTip": "Rattacher à la barre",
     "backTip": "Retour (Backspace, Échap)",
     "language": "Langue",
     "systemLanguage": "Automatique ({0})",

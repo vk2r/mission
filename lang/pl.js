@@ -66,6 +66,8 @@ var STRINGS = {
     "costsTotal": "Razem",
     "noActivity": "Brak aktywności zespołu",
     "settings": "Ustawienia",
+    "popOut": "Odłącz jako pływające okno",
+    "dockTip": "Zadokuj z powrotem na pasku",
     "backTip": "Wstecz (Backspace, Esc)",
     "language": "Język",
     "systemLanguage": "Automatycznie ({0})",
