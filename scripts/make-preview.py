@@ -7,7 +7,7 @@
 
 Both are the slide with the MausBot pill stretched to hold the crew (Atlas,
 Quill, Nova, Sage and Bolt) after the name, "MausBot [crew]". preview.webp is
-the animated one the README shows; preview.png is its first frame, the still
+the animated one the README shows; preview.png is its STILL_FRAME, the still
 the plugin marketplace shows. The crew comes from assets/preview/crew.webp, a
 10 s loop at 20 fps recorded from the real panel.
 
@@ -36,6 +36,7 @@ TEXT_END = 171    # first pill column past the "t" of "MausBot"
 GAP = 14          # between "MausBot" and the first avatar
 CAP = 24          # the pill's rounded end, short of the "M"
 END_PAD = 28      # last avatar to the pill's edge, as the edge to "M" on the left
+STILL_FRAME = 79  # crew.webp frame for preview.png: all five upright
 
 
 def px(emu):
@@ -167,5 +168,5 @@ def make_png(out, frame):
 
 dest = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT
 frames, durations = make_frames()
-make_png(dest / "preview.png", frames[0])
+make_png(dest / "preview.png", frames[STILL_FRAME])
 make_webp(dest / "preview.webp", frames, durations)
