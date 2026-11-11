@@ -159,7 +159,13 @@ pub fn known(roster: &[Value]) -> Option<crate::usage::Known> {
     (!ids.is_empty()).then_some(ids)
 }
 
-pub fn rows_for_at(roster: &[Value], assignments: Option<&Assignments>, now_ms: f64, grace: f64) -> Vec<Row> {
+pub fn rows_for_at(
+    roster: &[Value],
+    assignments: Option<&Assignments>,
+    now_ms: f64,
+    grace: f64,
+    festival: Option<&str>,
+) -> Vec<Row> {
     let readable = assignments.is_some();
     let live = assignments.map_or(&[][..], |found| &found.live[..]);
     let settled = assignments.map_or(&[][..], |found| &found.settled[..]);
@@ -175,7 +181,7 @@ pub fn rows_for_at(roster: &[Value], assignments: Option<&Assignments>, now_ms: 
             .or_else(|| pick_settled(settled.iter().filter(same_bot), now_ms, grace));
 
         let status = if readable { status_for(doing) } else { "unknown".to_string() };
-        let look = mascot::bot_look(bot, &status);
+        let look = mascot::bot_look(bot, &status, festival);
         let picture = picture_for(look.as_ref());
         let variants = variants_for(look.as_ref());
 
@@ -213,7 +219,7 @@ fn variants_for(look: Option<&mascot::Look>) -> Vec<Variant> {
     let Some(look) = look else {
         return Vec::new();
     };
-    let count = mascot::variant_count(&look.expression);
+    let count = if crate::festival::is_body(&look.body) { 0 } else { mascot::variant_count(&look.expression) };
     if count < 2 {
         return Vec::new();
     }
@@ -232,8 +238,14 @@ fn variants_for(look: Option<&mascot::Look>) -> Vec<Variant> {
 fn published(look: &mascot::Look, part: mascot::Part) -> String {
     static DRAWN: OnceLock<Mutex<HashMap<String, (u64, String)>>> = OnceLock::new();
     let key = format!(
-        "{}|{}|{}|{}|{}|{}",
-        look.body, look.colour, look.expression, look.variant, look.ink, matches!(part, mascot::Part::Eyes)
+        "{}|{}|{}|{}|{}|{}|{}",
+        look.body,
+        look.colour,
+        look.expression,
+        look.variant,
+        look.ink,
+        look.ink_set,
+        matches!(part, mascot::Part::Eyes)
     );
     let drawn = DRAWN.get_or_init(Default::default);
     let pruned = avatars::pruned();
@@ -429,7 +441,7 @@ mod tests {
             json!({"id": "d", "department": "no name"}),
             json!("not a bot"),
         ];
-        let rows = rows_for_at(&roster, None, 0.0, 0.0);
+        let rows = rows_for_at(&roster, None, 0.0, 0.0, None);
         let order: Vec<_> = rows.iter().map(|row| row.id.clone()).collect();
         assert_eq!(order, vec![json!("b"), json!("a"), json!("c")]);
         assert_eq!(rows[0].role, "chief");
@@ -444,7 +456,7 @@ mod tests {
             json!({"id": "c", "name": "C", "section": "   "}),
             json!({"id": "d", "name": "D", "section": "\u{202e}Evil\nTeam"}),
         ];
-        let rows = rows_for_at(&roster, None, 0.0, 0.0);
+        let rows = rows_for_at(&roster, None, 0.0, 0.0, None);
         let by_id = |id: &str| rows.iter().find(|row| row.id == id).expect("row");
         assert_eq!(by_id("a").department, "Design");
         assert_eq!(by_id("b").department, "Eng");

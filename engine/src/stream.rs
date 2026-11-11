@@ -14,7 +14,7 @@ use crate::db::{Assignments, Database};
 use crate::hypr::{self, Desktop, Hyprland, Monitor, Order, Window};
 use crate::logwatch::{self, Emitter, Notifier, Tail};
 use crate::ledger::Ledger;
-use crate::{alert, avatars, launch, paths, roster, usage};
+use crate::{alert, avatars, launch, paths, roster, skin, usage};
 
 const TICK: Duration = Duration::from_secs(1);
 const WINDOW_PERIOD: Duration = Duration::from_secs(2);
@@ -96,6 +96,9 @@ pub struct Engine {
     assignments: Option<Assignments>,
     working: i64,
     grace: f64,
+    festival: Option<String>,
+    skin_forced: Option<skin::Setting>,
+    skin_stamps: Vec<(String, u64, i64, i64)>,
     bots: Vec<roster::Row>,
     busy: bool,
     shown: (bool, i64),
@@ -151,6 +154,9 @@ impl Engine {
             assignments: None,
             working: 0,
             grace: roster::grace_ms(),
+            festival: None,
+            skin_forced: skin::forced(),
+            skin_stamps: Vec::new(),
             bots: Vec::new(),
             busy: false,
             shown: (false, 0),
@@ -236,6 +242,10 @@ impl Engine {
         }
 
         if self.refresh_assignments() {
+            bots_dirty = true;
+        }
+
+        if self.refresh_skin(first) {
             bots_dirty = true;
         }
 
@@ -363,6 +373,30 @@ impl Engine {
         true
     }
 
+    fn refresh_skin(&mut self, first: bool) -> bool {
+        let setting = match &self.skin_forced {
+            Some(forced) if first => Some(forced.clone()),
+            Some(_) => return false,
+            None => {
+                let Some(directory) = skin::directory() else {
+                    return false;
+                };
+                let stamps = skin::stamps(&directory);
+                if !first && stamps == self.skin_stamps {
+                    return false;
+                }
+                self.skin_stamps = stamps;
+                skin::read(&directory)
+            }
+        };
+        let festival = setting.and_then(|setting| setting.festival());
+        if festival == self.festival {
+            return false;
+        }
+        self.festival = festival;
+        true
+    }
+
     fn close_database(&mut self) -> bool {
         let had_connection = self.database.take().is_some();
         let had_rows = self.assignments.take().is_some();
@@ -377,7 +411,7 @@ impl Engine {
         self.bots_dirty = false;
         let now_ms = now.as_millisecond() as f64;
         let bots = match self.roster.as_deref() {
-            Some(roster) => roster::rows_for_at(roster, self.assignments.as_ref(), now_ms, self.grace),
+            Some(roster) => roster::rows_for_at(roster, self.assignments.as_ref(), now_ms, self.grace, self.festival.as_deref()),
             None => Vec::new(),
         };
         if bots != self.bots {

@@ -15,6 +15,7 @@ MausBot solo crea una bandeja del sistema en Windows, así que en Linux su venta
 - **El gasto del equipo** — de hoy, de los últimos 7 días o de los últimos 30, en una frase en el pie del panel y en una página Medidor con una línea de tendencia, una barra dividida y una lista por bot o por modelo.
 - **Notificaciones** — cuando un bot responde a otro, una notificación de escritorio lleva la primera línea del turno, y el icono avisa de que hay algo nuevo esperando.
 - **La ventana de la app, a un clic** — muestra u oculta la app de agentes con un clic central, tráela al frente o ábrela con un clic derecho.
+- **Vestidos de temporada** — cuando la skin de la app es Halloween o Diwali (y "Dress my bots up" está activado), las filas llevan los disfraces de esa skin, elegidos por el color de cada bot, y vuelven a sus mascotas normales en cuanto cambias de skin.
 - **Ocho idiomas** — inglés, español, alemán, francés, italiano, neerlandés, polaco y portugués, o sigue tu teclado.
 - **Ligero en el sistema** — un pequeño motor en Rust sirve a todas las pantallas, en reposo gasta unos pocos MiB de RAM y CPU sin medición.
 

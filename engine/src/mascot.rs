@@ -2,6 +2,7 @@ use std::sync::OnceLock;
 
 use serde_json::Value;
 
+use crate::festival;
 use crate::pyfmt;
 
 const CATALOGUE: &str = include_str!("../../mascot/mascot.json");
@@ -57,6 +58,7 @@ pub struct Look {
     pub colour: String,
     pub expression: String,
     pub ink: String,
+    pub ink_set: bool,
     pub variant: usize,
 }
 
@@ -72,14 +74,18 @@ pub fn catalogue() -> Option<&'static Value> {
         .as_ref()
 }
 
-pub fn bot_look(bot: &Value, status: &str) -> Option<Look> {
+pub fn festival_skin(name: &str) -> bool {
+    festival::is_skin(name)
+}
+
+pub fn bot_look(bot: &Value, status: &str, worn: Option<&str>) -> Option<Look> {
     let data = catalogue()?;
 
     let bodies = data.get("bodies")?.as_object()?;
-    let body = bot
+    let mut body = bot
         .get("mascotBody")
         .and_then(Value::as_str)
-        .filter(|body| bodies.contains_key(*body))
+        .filter(|body| bodies.contains_key(*body) || festival::is_body(body))
         .unwrap_or(DEFAULT_BODY)
         .to_string();
 
@@ -93,13 +99,17 @@ pub fn bot_look(bot: &Value, status: &str) -> Option<Look> {
         .unwrap_or_default()
         .to_string();
 
-    let ink = if bot.get("mascotFaceColor").and_then(Value::as_str) == Some("black") {
-        "#000000".to_string()
-    } else {
-        "#ffffff".to_string()
-    };
+    if let (Some(skin), Some(name)) = (worn, bot.get("color").and_then(Value::as_str)) {
+        if let Some(costume) = festival::dressed(skin, &body, name) {
+            body = costume;
+        }
+    }
 
-    Some(Look { body, colour, expression: expression_for(bot, status), ink, variant: 0 })
+    let face = bot.get("mascotFaceColor").and_then(Value::as_str);
+    let ink = if face == Some("black") { "#000000".to_string() } else { "#ffffff".to_string() };
+    let ink_set = matches!(face, Some("black" | "white"));
+
+    Some(Look { body, colour, expression: expression_for(bot, status), ink, ink_set, variant: 0 })
 }
 
 fn expression_for(bot: &Value, status: &str) -> String {
@@ -149,6 +159,9 @@ fn word_in(haystack: &str, word: &str) -> bool {
 }
 
 pub fn avatar_svg(look: &Look, part: Part) -> Option<String> {
+    if festival::is_body(&look.body) {
+        return festival::avatar_svg(look, part);
+    }
     let data = catalogue()?;
     let body = data.get("bodies")?.get(&look.body)?;
     let (light, base, shade) = gradient_stops(&look.colour);
@@ -205,6 +218,9 @@ pub fn avatar_svg(look: &Look, part: Part) -> Option<String> {
 }
 
 pub fn eye_pivot(look: &Look) -> Option<[f64; 2]> {
+    if festival::is_body(&look.body) {
+        return festival::eye_pivot(look);
+    }
     let (_, centre) = eye_marks(look)?;
     Some([
         pyfmt::round_digits((centre.0 - VIEWBOX_LEFT) / VIEWBOX_SIZE, 4),
@@ -385,7 +401,7 @@ mod tests {
     #[test]
     fn a_bot_keeps_its_own_look() {
         let bot = json!({"mascotBody": "star", "color": "red", "mascotExpression": "happy"});
-        let look = bot_look(&bot, "idle").expect("look");
+        let look = bot_look(&bot, "idle", None).expect("look");
         assert_eq!(look.body, "star");
         assert_eq!(look.colour, data_colour("red"));
         assert_eq!(look.expression, "happy");
@@ -395,7 +411,7 @@ mod tests {
     #[test]
     fn an_unknown_body_and_colour_fall_back_to_the_catalogue() {
         let bot = json!({"mascotBody": "not-a-body", "color": "not-a-colour"});
-        let look = bot_look(&bot, "idle").expect("look");
+        let look = bot_look(&bot, "idle", None).expect("look");
         assert_eq!(look.body, "cursor");
         assert_eq!(look.colour, data_colour("silver"));
     }
@@ -403,21 +419,38 @@ mod tests {
     #[test]
     fn a_legacy_expression_is_read_as_its_current_name() {
         let bot = json!({"mascotExpression": "focused"});
-        assert_eq!(bot_look(&bot, "idle").expect("look").expression, "working");
+        assert_eq!(bot_look(&bot, "idle", None).expect("look").expression, "working");
     }
 
     #[test]
     fn the_live_state_beats_the_role_and_the_role_beats_idle() {
-        assert_eq!(bot_look(&json!({}), "waiting").expect("look").expression, "listening");
+        assert_eq!(bot_look(&json!({}), "waiting", None).expect("look").expression, "listening");
         let engineer = json!({"name": "Dev", "title": "Engineer", "description": "builds"});
-        assert_eq!(bot_look(&engineer, "idle").expect("look").expression, "working");
-        assert_eq!(bot_look(&json!({"name": "Nobody"}), "idle").expect("look").expression, "idle");
+        assert_eq!(bot_look(&engineer, "idle", None).expect("look").expression, "working");
+        assert_eq!(bot_look(&json!({"name": "Nobody"}), "idle", None).expect("look").expression, "idle");
     }
 
     #[test]
     fn a_black_face_draws_its_ink_in_black() {
-        assert_eq!(bot_look(&json!({"mascotFaceColor": "black"}), "idle").expect("look").ink, "#000000");
-        assert_eq!(bot_look(&json!({"mascotFaceColor": "white"}), "idle").expect("look").ink, "#ffffff");
+        assert_eq!(bot_look(&json!({"mascotFaceColor": "black"}), "idle", None).expect("look").ink, "#000000");
+        assert_eq!(bot_look(&json!({"mascotFaceColor": "white"}), "idle", None).expect("look").ink, "#ffffff");
+    }
+
+    #[test]
+    fn a_festival_skin_dresses_a_bot_by_colour_and_its_own_ink_survives() {
+        let bot = json!({"mascotBody": "star", "color": "orange", "mascotFaceColor": "black"});
+        let look = bot_look(&bot, "idle", Some("halloween")).expect("look");
+        assert_eq!((look.body.as_str(), look.ink.as_str(), look.ink_set), ("pumpkin", "#000000", true));
+        assert_eq!(bot_look(&bot, "idle", Some("diwali")).expect("look").body, "laddu");
+        assert_eq!(bot_look(&bot, "idle", None).expect("look").body, "star");
+
+        let silver = json!({"mascotBody": "star", "color": "silver"});
+        assert_eq!(bot_look(&silver, "idle", Some("diwali")).expect("look").body, "star");
+        assert_eq!(bot_look(&json!({}), "idle", Some("diwali")).expect("look").body, "cursor");
+
+        let own = json!({"mascotBody": "ghost", "color": "blue"});
+        assert_eq!(bot_look(&own, "idle", None).expect("look").body, "ghost");
+        assert!(!bot_look(&json!({}), "idle", None).expect("look").ink_set);
     }
 
     fn data_colour(name: &str) -> String {
@@ -457,7 +490,7 @@ mod golden {
     }
 
     fn look(body: &str, expression: &str, ink: &str, colour: String) -> Look {
-        Look { body: body.to_string(), colour, expression: expression.to_string(), ink: ink.to_string(), variant: 0 }
+        Look { body: body.to_string(), colour, expression: expression.to_string(), ink: ink.to_string(), ink_set: false, variant: 0 }
     }
 
     fn ink_of(name: &str) -> &'static str {

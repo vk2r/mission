@@ -3,6 +3,7 @@
 mod alert;
 mod avatars;
 mod db;
+mod festival;
 mod hypr;
 mod launch;
 mod ledger;
@@ -11,6 +12,7 @@ mod mascot;
 mod paths;
 mod pyfmt;
 mod roster;
+mod skin;
 mod stream;
 mod usage;
 

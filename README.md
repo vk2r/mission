@@ -15,6 +15,7 @@ MausBot only builds a system tray on Windows, so on Linux its window has no way 
 - **The team's spend** — for today, the last 7 days or the last 30, in one sentence on the panel footer and on a Gauge page with a sparkline, a split bar and a list by bot or by model.
 - **Notifications** — when a bot answers another bot, a desktop notification carries the first line of the turn, and the icon lets you know something new is waiting.
 - **The app window, one click away** — show or hide the agent app with a middle click, raise or launch it with a right click.
+- **Dressed for the season** — when the app's skin is Halloween or Diwali (and "Dress my bots up" is on), the rows wear that skin's costumes, picked by each bot's colour, and go back to their normal mascots the moment you change skin.
 - **Eight languages** — English, Spanish, German, French, Italian, Dutch, Polish and Portuguese, or follow your keyboard.
 - **Light on the system** — one small Rust engine serves every screen, idles at a few MiB of RAM and no measurable CPU.
 
