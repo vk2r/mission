@@ -21,7 +21,9 @@ def px(emu):
     return emu / EMU_PER_PX
 
 
-def render(pptx=PPTX):
+def render(pptx=PPTX, skip=(), keep=None):
+    """Draw the slide. Pictures named in skip are left out; if keep is a dict,
+    each of them is stored there as (image, (x, y)) instead."""
     with zipfile.ZipFile(pptx) as z:
         slide = z.read("ppt/slides/slide1.xml").decode()
         rels = dict(re.findall(
@@ -34,6 +36,7 @@ def render(pptx=PPTX):
         bg = re.search(r'<p:bg>.*?r:embed="([^"]*)"', slide, re.S).group(1)
         canvas = media(bg)
         for pic in re.findall(r"<p:pic>.*?</p:pic>", slide, re.S):
+            name = re.search(r'name="([^"]*)"', pic).group(1)
             im = media(re.search(r'r:embed="([^"]*)"', pic).group(1))
             x, y, cx, cy = map(int, re.search(
                 r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(\d+)" cy="(\d+)"', pic).groups())
@@ -45,6 +48,10 @@ def render(pptx=PPTX):
                               round(w - w * a.get("r", 0) / 1e5), round(h - h * a.get("b", 0) / 1e5)))
             X, Y, W, H = round(px(x)), round(px(y)), round(px(cx)), round(px(cy))
             im = im.resize((W, H), Image.LANCZOS)
+            if name in skip:
+                if keep is not None:
+                    keep[name] = (im, (X, Y))
+                continue
             shadow = re.search(
                 r'<a:outerShdw blurRad="(\d+)" dist="(\d+)" dir="(\d+)".*?<a:alpha val="(\d+)"', pic, re.S)
             if shadow:
