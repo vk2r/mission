@@ -12,15 +12,19 @@ La marca de la app es **MausBot** (título de la ventana, https://mausbot.com/),
 
 ## Preparación
 
-Las herramientas de compilación están fijadas en `mise.toml`: la cadena de herramientas de Rust, `cargo-deny` para la auditoría de dependencias y `cargo-about` para el aviso de licencias de terceros.
+Las herramientas de compilación están fijadas en `mise.toml`: la cadena de herramientas de Rust, `cargo-deny` para la auditoría de dependencias, `cargo-about` para el aviso de licencias de terceros y `uv` para el script de la preview. Las comprobaciones necesitan además `node`, `snapshot` necesita `jq`, y `publish` necesita `git`, `curl` y `jq`; esas vienen del sistema.
 
 ```sh
-mise install            # Rust, cargo-deny, cargo-about
+mise install            # Rust, cargo-deny, cargo-about, uv
 mise run build          # recompila bin/engine
 mise run test           # tests del motor + la comprobación de traducciones
 mise run audit          # avisos, prohibiciones, licencias y fuentes de cada crate
 mise run licenses       # regenera licenses/THIRD-PARTY.txt (tras cambiar dependencias)
 mise run validate       # omarchy plugin validate .
+mise run snapshot       # imprime un snapshot de bin/engine (bin/engine --once | jq .)
+mise run preview        # regenera preview.png y preview.webp desde assets/presentation.pptx
+mise run publish        # push de main a GitHub, espera el binario firmado y luego push a Forgejo
+mise run publish -- v1.2.3   # lo mismo, y luego crea el tag de esa versión y lo sube a ambos (arranca release.yml)
 ```
 
 ```sh
@@ -29,6 +33,7 @@ mise run i18n            # solo la comprobación de traducciones
 UPDATE_GOLDEN=1 cargo test --bin engine golden   # desde engine/: regenera engine/tests/golden tras un cambio de dibujo intencionado
 ```
 
+- `mise run preview` ejecuta `scripts/make-preview.py` con `uv`, que instala su Pillow fijado en un entorno aislado. Dibuja la primera diapositiva de `assets/presentation.pptx` con la pill de MausBot alargada para contener al equipo de `assets/preview/crew.webp`: `preview.webp` es el ciclo animado de 10 s que muestra el README, y `preview.png` es uno de sus cuadros (`STILL_FRAME`, con los cinco avatares rectos), la imagen fija que muestra el marketplace de plugins, porque este reduce toda preview a un solo cuadro. El orden del equipo (`CREW_ORDER`), su tamaño y su separación son constantes al inicio del script. Edita la presentación, no las imágenes, y regenera ambas.
 - Para trabajar desde un checkout: enlaza el proyecto en la carpeta de plugins con el propio id del plugin — `ln -s ~/Projects/Software/mission ~/.config/omarchy/plugins/io.github.vk2r.mission` — luego añade **Mission** a la barra desde los ajustes de barra de Omarchy y reinicia la shell una vez (`omarchy restart shell`). Omarchy instala los plugins con un `git clone` simple y nunca compila, así que este es solo el camino de desarrollo.
 - Cargo compila en `~/.cache/openmausbot-engine/target`, fuera de la carpeta del plugin, porque Omarchy recarga el plugin cada vez que cambia un archivo dentro de él.
 - `bin/` solo contiene `engine`. Omarchy instala los plugins con un `git clone` simple y nunca compila, así que el binario está versionado y CI lo construye (ver [Binarios y releases](#binarios-y-releases)); un `mise run build` local es solo para pruebas. Ejecuta `git config core.hooksPath .githooks` una vez por clon: su hook `pre-commit` rechaza commits que toquen `bin/engine`, `bin/SHA256SUMS` o `bin/provenance.sigstore.json`, así que descarta una compilación local con `git restore --staged --worktree bin/engine`.
@@ -186,6 +191,8 @@ Una frase que cuenta algo es una sola traducción, no piezas pegadas: `costSente
 ## Binarios y releases
 
 `bin/engine` se construye y firma con [`build-engine.yml`](.github/workflows/build-engine.yml) en cada push a `main` que cambie `engine/`, `mise.toml`, `scripts/build-engine.sh` o el propio workflow. Ejecuta primero la auditoría de dependencias y los tests — si alguno falla, no se firma nada — luego firma una atestación de procedencia de la compilación, versiona `bin/engine` con `SHA256SUMS` y la atestación como `provenance.sigstore.json`, y arranca [`verify-binaries.yml`](.github/workflows/verify-binaries.yml). [`release.yml`](.github/workflows/release.yml) publica esos archivos en un tag `v*` sin recompilar.
+
+Publica con `mise run publish` (`scripts/publish.sh`) desde un `main` limpio. Hace push al remoto `github`; si el push toca las rutas de arriba, espera a `build-engine.yml` sobre ese commit (consultando la API de GitHub, con `GITHUB_TOKEN` opcional para el límite de peticiones) y se detiene sin tocar Forgejo si la compilación falla o tarda demasiado. Luego avanza (fast-forward) al commit con el binario firmado y hace push de la misma historia al remoto `forgejo`. Nunca fuerza. Para publicar una versión, pásala después de `--`: `mise run publish -- v1.2.3`. Primero sube `version` en `manifest.json` y haz commit, y luego usa ese mismo número con una `v` delante. El script rechaza un tag que no empiece con `v` (`release.yml` solo escucha `v*`) o que ya exista, y crea el tag anotado solo cuando ya llegó el binario firmado, así que el tag siempre apunta a un commit con su binario; luego sube el tag a GitHub, donde `release.yml` publica los archivos, y a Forgejo. Sin versión, publica `main` y no crea ningún tag. Los nombres de los remotos, el repositorio, la URL de la API y los tiempos de espera se pueden cambiar con las variables `PUBLISH_*` al inicio del script.
 
 Para comprobar el binario tú mismo:
 

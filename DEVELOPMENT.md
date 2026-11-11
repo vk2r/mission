@@ -12,15 +12,19 @@ The app's brand is **MausBot** (window title, https://mausbot.com/), and every t
 
 ## Setup
 
-The build tools are pinned in `mise.toml`: the Rust toolchain, `cargo-deny` for the dependency audit and `cargo-about` for the third-party licence notice.
+The build tools are pinned in `mise.toml`: the Rust toolchain, `cargo-deny` for the dependency audit, `cargo-about` for the third-party licence notice and `uv` for the preview script. The checks also need `node`, `snapshot` needs `jq`, and `publish` needs `git`, `curl` and `jq`; those come from the system.
 
 ```sh
-mise install            # Rust, cargo-deny, cargo-about
+mise install            # Rust, cargo-deny, cargo-about, uv
 mise run build          # rebuild bin/engine
 mise run test           # engine tests + the translation check
 mise run audit          # advisories, bans, licences and sources of every crate
 mise run licenses       # regenerate licenses/THIRD-PARTY.txt (after changing dependencies)
 mise run validate       # omarchy plugin validate .
+mise run snapshot       # print one snapshot from bin/engine (bin/engine --once | jq .)
+mise run preview        # regenerate preview.png and preview.webp from assets/presentation.pptx
+mise run publish        # push main to GitHub, wait for the signed binary, then push to Forgejo
+mise run publish -- v1.2.3   # the same, then tag that version and push the tag to both (starts release.yml)
 ```
 
 ```sh
@@ -29,6 +33,7 @@ mise run i18n            # only the translation check
 UPDATE_GOLDEN=1 cargo test --bin engine golden   # from engine/: regenerate engine/tests/golden after an intended drawing change
 ```
 
+- `mise run preview` runs `scripts/make-preview.py` through `uv`, which installs its pinned Pillow in an isolated environment. It draws the first slide of `assets/presentation.pptx` with the MausBot pill stretched to hold the crew from `assets/preview/crew.webp`: `preview.webp` is the 10 s animated loop the README shows, and `preview.png` is one frame of it (`STILL_FRAME`, all five avatars upright), the still the plugin marketplace shows, since it flattens every preview to a single frame. The crew's order (`CREW_ORDER`), size and spacing are constants at the top of the script. Edit the presentation, not the images, and regenerate both.
 - Running from a checkout: symlink the project into the plugins folder under the plugin's own id — `ln -s ~/Projects/Software/mission ~/.config/omarchy/plugins/io.github.vk2r.mission` — then add **Mission** to the bar from Omarchy's bar settings and restart the shell once (`omarchy restart shell`). Omarchy installs plugins with a plain `git clone` and never builds, so this is the development path only.
 - Cargo builds into `~/.cache/openmausbot-engine/target`, outside the plugin folder, because Omarchy reloads a plugin whenever a file in it changes.
 - `bin/` holds only `engine`. Omarchy installs plugins with a plain `git clone` and never builds, so the binary is committed and CI builds it (see [Binaries and releases](#binaries-and-releases)); a local `mise run build` is only for testing. Run `git config core.hooksPath .githooks` once per clone: its `pre-commit` hook refuses commits that touch `bin/engine`, `bin/SHA256SUMS` or `bin/provenance.sigstore.json`, so drop a local build with `git restore --staged --worktree bin/engine`.
@@ -37,25 +42,25 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # from engine/: regenerate engi
 
 ## The pieces
 
-| file                                | what it is                                                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `manifest.json`                     | plugin manifest (`bar-widget`)                                                                              |
-| `qmldir`                            | registers the one engine hub singleton for the plugin's own directory                                       |
-| `BarWidget.qml`                     | the icon, its turning stars and the panel loader; it draws, it never polls                                  |
-| `EngineHub.qml`                     | `pragma Singleton`: one `bin/engine` for the whole shell, and the one snapshot every widget reads           |
-| `Panel.qml`                         | the panel host: the card, the keyboard, the page in view and the words every page uses                      |
-| `panel/Home.qml`                    | the team page: the hierarchy, and the footer (the spend in one sentence, and the costs button)              |
-| `panel/Settings.qml`                | language, the cost period, notifications and the widget options                                             |
-| `panel/Costs.qml`                   | the cost of the chosen period: total, sparkline, 100 % split bar and the list by bot or by model            |
-| `components/BotRow.qml`             | one bot in the team page: mascot, name, current work, state dot and word                                    |
-| `components/RangePicker.qml`        | the shared period selector (Settings page and Gauge page header)                                            |
-| `mascot/motion.js`                  | the app's per-face mascot motion table and blink timing (the sidebar's), used by `BotRow.qml`               |
-| `components/BrandIcon.qml`          | the mark, tinted from the SVG in `assets/` for the bar and the panel                                        |
-| `components/CompactDropdown.qml`    | the small selector the settings page uses                                                                   |
-| `lang/index.js`, `lang/*.js`        | the eight languages (`index.js` is the loader); `en`, `es`, `de`, `fr`, `it`, `nl`, `pl`, `pt`              |
-| `mascot/mascot.json`                | the app's own mascot catalogue: ten bodies and twenty-five faces, extracted from the installed app          |
-| `engine/`                           | the Rust sources of `bin/engine` (daemon, roster, mascots, Hyprland, log follower, spend)                   |
-| `bin/engine`                        | the binary the bar runs: one JSON line per change, orders on stdin                                          |
+| file                             | what it is                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `manifest.json`                  | plugin manifest (`bar-widget`)                                                                     |
+| `qmldir`                         | registers the one engine hub singleton for the plugin's own directory                              |
+| `BarWidget.qml`                  | the icon, its turning stars and the panel loader; it draws, it never polls                         |
+| `EngineHub.qml`                  | `pragma Singleton`: one `bin/engine` for the whole shell, and the one snapshot every widget reads  |
+| `Panel.qml`                      | the panel host: the card, the keyboard, the page in view and the words every page uses             |
+| `panel/Home.qml`                 | the team page: the hierarchy, and the footer (the spend in one sentence, and the costs button)     |
+| `panel/Settings.qml`             | language, the cost period, notifications and the widget options                                    |
+| `panel/Costs.qml`                | the cost of the chosen period: total, sparkline, 100 % split bar and the list by bot or by model   |
+| `components/BotRow.qml`          | one bot in the team page: mascot, name, current work, state dot and word                           |
+| `components/RangePicker.qml`     | the shared period selector (Settings page and Gauge page header)                                   |
+| `mascot/motion.js`               | the app's per-face mascot motion table and blink timing (the sidebar's), used by `BotRow.qml`      |
+| `components/BrandIcon.qml`       | the mark, tinted from the SVG in `assets/` for the bar and the panel                               |
+| `components/CompactDropdown.qml` | the small selector the settings page uses                                                          |
+| `lang/index.js`, `lang/*.js`     | the eight languages (`index.js` is the loader); `en`, `es`, `de`, `fr`, `it`, `nl`, `pl`, `pt`     |
+| `mascot/mascot.json`             | the app's own mascot catalogue: ten bodies and twenty-five faces, extracted from the installed app |
+| `engine/`                        | the Rust sources of `bin/engine` (daemon, roster, mascots, Hyprland, log follower, spend)          |
+| `bin/engine`                     | the binary the bar runs: one JSON line per change, orders on stdin                                 |
 
 ## The engine
 
@@ -83,7 +88,7 @@ The clock can be moved for a test — `bin/engine --once --now 2026-11-02T00:00:
 
 ## The usage ledger
 
-- **How the app writes `usage/YYYY-MM.jsonl`:** it only appends. The app's `usage-ledger.js` writes every record with `appendFile(file, JSON.stringify(record) + "\n", { mode: 0o600 })`, through one write queue per data directory, and nothing else in the installed app opens those files for writing (`fleet-cli` and `group-thread-usage` only read). So `ledger.rs` trusts the inode, the length and the 4 KiB guard before the old end; the time-based full reread (`RECHECK`) is now 30 minutes and is only a net for a file someone edited by hand further back than the guard sees. Before, it was 60 s counted from the last *full* read, so about half of the real changes (one record every ~42 s) reread the whole month. Measured with a 6 MB month, 12 appends 42 s apart: 6 of 12 changes read 6.1 MB before, 0 of 12 now (61 KB each, all of it the Hyprland poll).
+- **How the app writes `usage/YYYY-MM.jsonl`:** it only appends. The app's `usage-ledger.js` writes every record with `appendFile(file, JSON.stringify(record) + "\n", { mode: 0o600 })`, through one write queue per data directory, and nothing else in the installed app opens those files for writing (`fleet-cli` and `group-thread-usage` only read). So `ledger.rs` trusts the inode, the length and the 4 KiB guard before the old end; the time-based full reread (`RECHECK`) is now 30 minutes and is only a net for a file someone edited by hand further back than the guard sees. Before, it was 60 s counted from the last _full_ read, so about half of the real changes (one record every ~42 s) reread the whole month. Measured with a 6 MB month, 12 appends 42 s apart: 6 of 12 changes read 6.1 MB before, 0 of 12 now (61 KB each, all of it the Hyprland poll).
 - **Deliberately not done (debt):** a block-hash check of the part already read (not needed while the app only appends); #7 caching the time zone per tick (`TimeZone::system()` is microseconds, and `TZ` changes are then picked up at once); #9 a page registry in `Panel.qml` (adding a page still touches `page`, `goTo`, `contentHeight` and the visibility of each page); N4 per-record local date/time (the aggregation walks the month, ~3 ms with 6 MB); #8 caching the `costs` JSON.
 - **The line:** `series` bars are rounded to six decimals, `variants[0]` (the row's own drawing) goes out empty, and `byBot`/`byModel` rows carry `botId` so the panel colours by id, not by name. Net effect on `--once`: 14.7 KB to 15.2 KB.
 - **Avatars:** the URL of a drawing is remembered next to its SVG and forgotten when `prune` has removed any file; a file already named like a drawing is reused only if it is a regular file of the same length.
@@ -186,6 +191,8 @@ A sentence that counts something is one translation, not pieces glued together: 
 ## Binaries and releases
 
 `bin/engine` is built and signed by [`build-engine.yml`](.github/workflows/build-engine.yml) on every push to `main` that changes `engine/`, `mise.toml`, `scripts/build-engine.sh` or the workflow itself. It runs the dependency audit and the tests first — if either fails, nothing is signed — then signs a build provenance attestation, commits `bin/engine` with `SHA256SUMS` and the attestation as `provenance.sigstore.json`, and starts [`verify-binaries.yml`](.github/workflows/verify-binaries.yml). [`release.yml`](.github/workflows/release.yml) publishes those files on a `v*` tag without rebuilding.
+
+Publish with `mise run publish` (`scripts/publish.sh`) from a clean `main`. It pushes to the `github` remote; if the push touches the paths above it waits for `build-engine.yml` on that commit (polling the GitHub API, `GITHUB_TOKEN` optional for the rate limit) and stops without touching Forgejo if the build fails or takes too long. It then fast-forwards to the commit with the signed binary and pushes the same history to the `forgejo` remote. It never forces. To release a version, pass it after `--`: `mise run publish -- v1.2.3`. Bump `version` in `manifest.json` and commit it first, then use that same number with a `v` in front. The script refuses a tag that does not start with `v` (`release.yml` only listens to `v*`) or that already exists, and it creates the annotated tag only after the signed binary has landed, so the tag always points at a commit with its binary; it then pushes the tag to GitHub, where `release.yml` publishes the files, and to Forgejo. Without a version it publishes `main` and creates no tag. Remote names, repository, API URL and timeouts can be overridden with the `PUBLISH_*` variables at the top of the script.
 
 To check the binary yourself:
 
