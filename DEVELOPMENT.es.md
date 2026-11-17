@@ -16,15 +16,15 @@ Las herramientas de compilación están fijadas en `mise.toml`: la cadena de her
 
 ```sh
 mise install            # Rust, cargo-deny, cargo-about, uv
-mise run build          # recompila bin/engine
+mise run build          # compila el motor en bin/engine.local (git lo ignora)
 mise run test           # tests del motor + la comprobación de traducciones
 mise run audit          # avisos, prohibiciones, licencias y fuentes de cada crate
 mise run licenses       # regenera licenses/THIRD-PARTY.txt (tras cambiar dependencias)
 mise run validate       # omarchy plugin validate .
-mise run snapshot       # imprime un snapshot de bin/engine (bin/engine --once | jq .)
+mise run snapshot       # imprime un snapshot de la compilación local (bin/engine.local --once | jq .)
 mise run preview        # regenera preview.png y preview.webp desde assets/presentation.pptx
-mise run publish        # push de main a GitHub, espera el binario firmado y luego push a Forgejo
-mise run publish -- v1.2.3   # lo mismo, y luego crea el tag de esa versión y lo sube a ambos (arranca release.yml)
+mise run publish        # tag de la versión de manifest.json, push del tag a Forgejo, espera su Release en GitHub y luego push de main
+mise run publish -- v1.2.3   # lo mismo, tras fijar esa versión en manifest.json y engine/Cargo.toml
 ```
 
 ```sh
@@ -36,7 +36,7 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # desde engine/: regenera engin
 - `mise run preview` ejecuta `scripts/make-preview.py` con `uv`, que instala su Pillow fijado en un entorno aislado. Dibuja la primera diapositiva de `assets/presentation.pptx` con la pill de MausBot alargada para contener al equipo de `assets/preview/crew.webp`: `preview.webp` es el ciclo animado de 10 s que muestra el README, y `preview.png` es uno de sus cuadros (`STILL_FRAME`, con los cinco avatares rectos), la imagen fija que muestra el marketplace de plugins, porque este reduce toda preview a un solo cuadro. El orden del equipo (`CREW_ORDER`), su tamaño y su separación son constantes al inicio del script. Edita la presentación, no las imágenes, y regenera ambas.
 - Para trabajar desde un checkout: enlaza el proyecto en la carpeta de plugins con el propio id del plugin — `ln -s ~/Projects/Software/mission ~/.config/omarchy/plugins/io.github.vk2r.mission` — luego añade **Mission** a la barra desde los ajustes de barra de Omarchy y reinicia la shell una vez (`omarchy restart shell`). Omarchy instala los plugins con un `git clone` simple y nunca compila, así que este es solo el camino de desarrollo.
 - Cargo compila en `~/.cache/openmausbot-engine/target`, fuera de la carpeta del plugin, porque Omarchy recarga el plugin cada vez que cambia un archivo dentro de él.
-- `bin/` solo contiene `engine`. Omarchy instala los plugins con un `git clone` simple y nunca compila, así que el binario está versionado y CI lo construye (ver [Binarios y releases](#binarios-y-releases)); un `mise run build` local es solo para pruebas. Ejecuta `git config core.hooksPath .githooks` una vez por clon: su hook `pre-commit` rechaza commits que toquen `bin/engine`, `bin/SHA256SUMS` o `bin/provenance.sigstore.json`, así que descarta una compilación local con `git restore --staged --worktree bin/engine`.
+- `bin/` solo versiona `run-engine`. Omarchy instala los plugins con un `git clone` simple y nunca compila, así que el motor de cada versión sale del Release de GitHub de esa versión y `bin/run-engine` lo descarga (ver [Binarios y releases](#binarios-y-releases)). `mise run build` escribe `bin/engine.local`, que git ignora y que `bin/run-engine` usa mientras coincida con la versión del manifest; `bin/engine` y `bin/engine-*` no se commitean nunca.
 - Versiona `engine/Cargo.lock`, y `licenses/THIRD-PARTY.txt` tras `mise run licenses`, cuando cambien las dependencias.
 - El JSON que imprime el motor es el contrato con el QML (`EngineHub.qml` → `BarWidget.qml` / `Panel.qml`); conserva su forma al cambiar el motor. `engine/tests/daemon.rs` lo verifica.
 
@@ -47,7 +47,7 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # desde engine/: regenera engin
 | `manifest.json`                    | manifiesto del plugin (`bar-widget`)                                                                        |
 | `qmldir`                           | registra el único singleton de motor para la carpeta propia del plugin                                      |
 | `BarWidget.qml`                    | el icono, sus estrellas que giran y el cargador del panel; dibuja, nunca consulta en bucle                 |
-| `EngineHub.qml`                    | `pragma Singleton`: un `bin/engine` para toda la shell, y la única instantánea que lee cada widget          |
+| `EngineHub.qml`                    | `pragma Singleton`: un motor para toda la shell, y la única instantánea que lee cada widget          |
 | `Panel.qml`                        | el anfitrión del panel: la tarjeta, el teclado, la página en vista y las palabras que usan todas las páginas |
 | `panel/Home.qml`                   | la página del equipo: la jerarquía y el pie (el gasto en una frase y el botón de medidor)                    |
 | `panel/Settings.qml`               | idioma, el período de costo, notificaciones y las opciones del widget                                       |
@@ -59,12 +59,12 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # desde engine/: regenera engin
 | `components/CompactDropdown.qml`   | el selector pequeño que usa la página de Ajustes                                                            |
 | `lang/index.js`, `lang/*.js`       | los ocho idiomas (`index.js` es el cargador); `en`, `es`, `de`, `fr`, `it`, `nl`, `pl`, `pt`                |
 | `mascot/mascot.json`               | el catálogo de mascotas de la propia app: diez cuerpos y veinticinco caras, extraído de la app instalada    |
-| `engine/`                          | las fuentes en Rust de `bin/engine` (demonio, roster, mascotas, Hyprland, seguidor de registro, gasto)      |
-| `bin/engine`                       | el binario que ejecuta la barra: una línea JSON por cambio, órdenes por stdin                               |
+| `engine/`                          | las fuentes en Rust del motor (demonio, roster, mascotas, Hyprland, seguidor de registro, gasto)      |
+| `bin/run-engine`                   | arranca el motor de la versión del manifest (compilación local, instalado, o descargado y verificado)        |
 
 ## El motor
 
-`bin/engine` sin argumentos es el demonio que ejecuta la barra: una línea JSON por cambio en stdout, órdenes (`refresh`, `show`, `hide`, `toggle`, `ack`) en stdin, y EOF en stdin lo termina — así un widget retirado de la barra no deja ningún proceso detrás. Una línea lleva `v`, `ok`, `window`, `alert`, `busy`, `working`, `bots` y `costs`.
+El motor sin argumentos es el demonio que ejecuta la barra: una línea JSON por cambio en stdout, órdenes (`refresh`, `show`, `hide`, `toggle`, `ack`) en stdin, y EOF en stdin lo termina — así un widget retirado de la barra no deja ningún proceso detrás. Una línea lleva `v`, `ok`, `window`, `alert`, `busy`, `working`, `bots` y `costs`.
 
 - **Una lectura por fuente.** Un tic cuesta un `PRAGMA data_version` sobre la base de datos de la app y unas pocas llamadas `stat()`; las respuestas se reconstruyen solo para la fuente que cambió, y un tic que no encuentra nada no dice nada.
 - **Gasto.** `usage.rs` suma `usage/YYYY-MM.jsonl` sobre tres ventanas que terminan hoy: `day`, `week` (los últimos 7 días) y `month` (los últimos 30), con un margen de dos días al elegir los archivos a leer, porque un registro con sello en UTC puede caer en otra fecha local en una zona horaria adelantada. Cada rango lleva también `series`, una barra por hora del día o por día de la ventana, llenada en la misma lectura para que las barras y el total no puedan discrepar, y dos particiones del mismo dinero, `byBot` y `byModel`: el modelo es el campo `model` del registro, recortado, sin caracteres de control y cortado a 60 bytes, para que una línea malformada no estire una fila; cada fila de `byModel` nombra además al bot vivo que más gastó en él (`bot`, ausente cuando solo bots eliminados o sin nombre lo usaron), lo que la página de medidor convierte en el color de la fila. Una línea corrupta se salta, nunca es fatal.
@@ -79,12 +79,12 @@ En reposo el demonio gasta cerca del 0,012 % de un núcleo y 7,8 MiB, sin proces
 Para observar el demonio tú mismo:
 
 ```sh
-bin/engine --once                     # la línea, una vez, en una terminal
-bin/engine                            # líneas a medida que cambia algo; Ctrl-D lo termina
-printf 'hide\nshow\n' | bin/engine     # las órdenes entran por stdin, y el cierre del tubo lo termina
+bin/engine.local --once                     # la línea, una vez, en una terminal
+bin/engine.local                      # líneas a medida que cambia algo; Ctrl-D lo termina
+printf 'hide\nshow\n' | bin/engine.local # las órdenes entran por stdin, y el cierre del tubo lo termina
 ```
 
-El reloj se puede mover para una prueba — `bin/engine --once --now 2026-11-02T00:00:05-03:00` — que es como se comprueba la medianoche y los cinco minutos de gracia de `failed` sin esperarlos.
+El reloj se puede mover para una prueba — `bin/engine.local --once --now 2026-11-02T00:00:05-03:00` — que es como se comprueba la medianoche y los cinco minutos de gracia de `failed` sin esperarlos.
 
 ## El registro de uso
 
@@ -96,7 +96,7 @@ El reloj se puede mover para una prueba — `bin/engine --once --now 2026-11-02T
 
 ## Un motor para todas las pantallas
 
-`EngineHub.qml` es un singleton de QML (registrado en `qmldir`). Esta shell ejecuta una barra, y esa barra construye un widget por monitor dentro de un único motor QML, así que el singleton es un objeto para todas las pantallas, y es el dueño del único proceso `bin/engine`: `snapshot`, `state`, `alerting`, `teamBusy`, `costs` y los relojes de animación `spin` y `slowSpin` los leen ambas barras de los mismos valores, y nunca arranca un segundo motor.
+`EngineHub.qml` es un singleton de QML (registrado en `qmldir`). Esta shell ejecuta una barra, y esa barra construye un widget por monitor dentro de un único motor QML, así que el singleton es un objeto para todas las pantallas, y es el dueño del único proceso del motor (arrancado con `bin/run-engine`): `snapshot`, `state`, `alerting`, `teamBusy`, `costs` y los relojes de animación `spin` y `slowSpin` los leen ambas barras de los mismos valores, y nunca arranca un segundo motor.
 
 Los widgets se registran en el hub (`attach`/`detach`); cuando se va el último, el motor se detiene, así que un widget retirado de la barra no deja ningún proceso detrás. Las órdenes que envían los widgets — `show`, `hide`, `toggle`, `ack`, `refresh` — vuelven por el stdin del motor, así que un clic no arranca ningún proceso.
 
@@ -190,13 +190,32 @@ Una frase que cuenta algo es una sola traducción, no piezas pegadas: `costSente
 
 ## Binarios y releases
 
-`bin/engine` se construye y firma con [`build-engine.yml`](.github/workflows/build-engine.yml) en cada push a `main` que cambie `engine/`, `mise.toml`, `scripts/build-engine.sh` o el propio workflow. Ejecuta primero la auditoría de dependencias y los tests — si alguno falla, no se firma nada — luego firma una atestación de procedencia de la compilación, versiona `bin/engine` con `SHA256SUMS` y la atestación como `provenance.sigstore.json`, y arranca [`verify-binaries.yml`](.github/workflows/verify-binaries.yml). [`release.yml`](.github/workflows/release.yml) publica esos archivos en un tag `v*` sin recompilar.
+El motor no está en git. Una versión es una sola cosa: `manifest.json` guarda el número, el tag `vX.Y.Z` apunta al commit con ese número, y [`release.yml`](.github/workflows/release.yml) compila el motor exactamente desde ese commit cuando el tag llega a GitHub. Su job de build (token de solo lectura, sin secretos) comprueba que el tag sea igual a la `version` de `manifest.json` y de `engine/Cargo.toml`, ejecuta la auditoría de dependencias y los tests, y genera `engine` y su `SHA256SUMS`; un segundo job, que nunca descarga código del repositorio, atesta el archivo con la procedencia de build de GitHub y publica el Release `vX.Y.Z` con `engine`, `SHA256SUMS` y `provenance.sigstore.json`. Nada se commitea de vuelta a una rama.
 
-Publica con `mise run publish` (`scripts/publish.sh`) desde un `main` limpio. Hace push al remoto `github`; si el push toca las rutas de arriba, espera a `build-engine.yml` sobre ese commit (consultando la API de GitHub, con `GITHUB_TOKEN` opcional para el límite de peticiones) y se detiene sin tocar Forgejo si la compilación falla o tarda demasiado. Luego avanza (fast-forward) al commit con el binario firmado y hace push de la misma historia al remoto `forgejo`. Nunca fuerza. Para publicar una versión, pásala después de `--`: `mise run publish -- v1.2.3`. Primero sube `version` en `manifest.json` y haz commit, y luego usa ese mismo número con una `v` delante. El script rechaza un tag que no empiece con `v` (`release.yml` solo escucha `v*`) o que ya exista, y crea el tag anotado solo cuando ya llegó el binario firmado, así que el tag siempre apunta a un commit con su binario; luego sube el tag a GitHub, donde `release.yml` publica los archivos, y a Forgejo. Sin versión, publica `main` y no crea ningún tag. Los nombres de los remotos, el repositorio, la URL de la API y los tiempos de espera se pueden cambiar con las variables `PUBLISH_*` al inicio del script.
+`bin/run-engine` es lo que ejecuta `EngineHub.qml` (`sh bin/run-engine`) y es el único archivo versionado de `bin/` (`.gitignore` ignora el resto). Lee la versión de `manifest.json` y arranca solo el motor de esa versión:
 
-Para comprobar el binario tú mismo:
+1. `bin/engine.local`, la compilación que hace `mise run build`, solo si `bin/engine.local.version` es igual a la versión del manifest (así una compilación local antigua no se usa tras cambiar de versión);
+2. `bin/engine-X.Y.Z`, si ya se descargó;
+3. si no, descarga `engine`, `SHA256SUMS` y `provenance.sigstore.json` de `https://github.com/vk2r/mission/releases/download/vX.Y.Z/` (solo HTTPS, con tiempos máximos y límite de tamaño), exige que el checksum coincida **y** que la atestación de build sea válida para `vk2r/mission` y `release.yml@refs/tags/vX.Y.Z` (se comprueba con `cosign verify-blob-attestation`, así que `cosign` tiene que estar instalado). Solo entonces instala `bin/engine-X.Y.Z`, borra los motores de otras versiones y lo ejecuta.
+
+Sin red, o si falla una comprobación, no ejecuta ningún motor: imprime `{"error":"engine_unavailable","version":"X.Y.Z",...}` y sale con código 3; el hub muestra «Motor X.Y.Z no disponible» con el motivo tras dos puntos (tooltip y panel) y reintenta al minuto. Nunca ejecuta el motor de otra versión, y `omarchy plugin add` (un `git clone` simple) no necesita red más allá del clon. **La atestación es obligatoria, como en pxu:** `SHA256SUMS` sale del mismo Release que el archivo, así que el checksum solo prueba que la descarga está íntegra, no quién la construyó; quien pudiera reemplazar el Release podría reemplazar ambos. Sin `cosign` el lanzador falla cerrado («install cosign to verify the engine»). `gh` no se usa como verificador: no se pudo comprobar aquí que `gh attestation verify` quede atado al tag exacto. La única salida es el opt-out explícito `MISSION_SKIP_ATTESTATION=1` en el entorno del motor, que acepta solo el checksum y avisa en cada arranque. `MISSION_REPO` y `MISSION_RELEASE_BASE` (que admite `file://`) existen para las pruebas y solo valen con `MISSION_TEST=1`; si no, el repositorio es siempre `vk2r/mission` por HTTPS. `sh bin/run-engine --verify-only DIR` descarga y verifica un Release en un directorio vacío con las mismas comprobaciones (y sin opt-out), sin instalar ni ejecutar nada; lo usa `publish.sh`.
+
+Ramas: el trabajo diario va en `dev`; `main` solo avanza con versiones publicadas y siempre apunta a un tag. `omarchy plugin update` trae `main`, así que la interfaz y el motor que pide son siempre la misma versión, y el Release de esa versión ya existe cuando `main` llega.
+
+Publica con `mise run publish` (`scripts/publish.sh`), en `dev` y con el árbol limpio; `mise run publish -- v1.2.0` primero fija esa versión en `manifest.json`, `engine/Cargo.toml` y `engine/Cargo.lock` y la commitea. Sin argumento publica la versión que ya está en `manifest.json`. Solo escribe en Forgejo; GitHub solo se lee, para rechazar un tag que ya exista allí en otro commit. Forgejo tiene un push mirror a GitHub (todas las refs, sincroniza en cada push), así que:
+
+1. crea el tag anotado `vX.Y.Z` sobre el commit y empuja **solo el tag** a Forgejo (`main` se queda donde estaba, así el espejo no puede llevar un `main` cuyo motor no existe);
+2. espera a que el Release `vX.Y.Z` exista en GitHub, no sea borrador y tenga `engine`, `SHA256SUMS` y `provenance.sigstore.json` (consulta la API cada `PUBLISH_POLL_INTERVAL` s, como máximo `PUBLISH_TIMEOUT` s, 1800 por defecto; `GITHUB_TOKEN` es opcional, para el límite de la API), y se detiene antes si falló la ejecución de `release.yml` de ese commit;
+3. exige una ejecución de `release.yml` para ese commit terminada en `success`, descarga los tres assets a un directorio temporal y los verifica con `bin/run-engine --verify-only` (checksum más la atestación de `release.yml@refs/tags/vX.Y.Z`, sin opt-out; necesita `cosign`); cualquier fallo se detiene aquí sin tocar `main`;
+4. solo entonces comprueba que el tag de GitHub apunte al mismo commit y empuja ese commit a `main` en Forgejo (fast-forward, nunca forzado; el script se niega si el `main` de Forgejo no es ancestro de `HEAD`), y adelanta el `main` local si puede.
+
+Si se agota el tiempo se detiene antes del paso 4 y lo dice; vuelve a ejecutar `mise run publish` para seguir esperando (el tag ya está subido). Si el build falló, el tag queda en ambos servidores: corrígelo y publica una versión nueva (un tag publicado nunca se mueve). El script no usa remotos de git: construye las URL con `FORGEJO_URL` y `GITHUB_URL` más el nombre de la carpeta del repositorio (`mission`), leídas de un `.env` en la raíz (ignorado por git); se detiene si falta alguna:
 
 ```sh
-(cd bin && sha256sum -c SHA256SUMS)
-gh attestation verify bin/engine --repo vk2r/mission --bundle bin/provenance.sigstore.json
+FORGEJO_URL=<URL base de la cuenta en Forgejo>
+GITHUB_URL=<URL base de la cuenta en GitHub>
 ```
+
+La URL de la API, el repositorio y los tiempos de espera se pueden cambiar con las variables `PUBLISH_*` al inicio del script (existen para las pruebas).
+
+Para comprobar un Release a mano: `sha256sum -c SHA256SUMS` y `cosign verify-blob-attestation --bundle provenance.sigstore.json --type slsaprovenance1 --certificate-identity https://github.com/vk2r/mission/.github/workflows/release.yml@refs/tags/vX.Y.Z --certificate-oidc-issuer https://token.actions.githubusercontent.com engine`.

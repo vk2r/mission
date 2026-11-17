@@ -177,7 +177,10 @@ Scope {
 
   readonly property bool notify: hub.notifyOn
 
-  readonly property string engine: Qt.resolvedUrl("bin/engine").toString().replace(/^file:\/\//, "")
+  readonly property string launcher: Qt.resolvedUrl("bin/run-engine").toString().replace(/^file:\/\//, "")
+
+  property string engineMissing: ""
+  property string engineReason: ""
 
   function attach(widget) {
     if (consumers.indexOf(widget) < 0) consumers = consumers.concat([widget])
@@ -190,6 +193,8 @@ Scope {
   function apply(data) {
     hub.snapshot = data
     hub.ready = true
+    hub.engineMissing = ""
+    hub.engineReason = ""
     var window = data.window ? data.window : {}
     hub.state = String(window.state ? window.state : "absent")
     hub.appRunning = window.running !== undefined ? window.running === true : hub.state !== "absent"
@@ -229,7 +234,7 @@ Scope {
 
   Process {
     id: engineProc
-    command: hub.notify ? [hub.engine] : [hub.engine, "--no-notify"]
+    command: hub.notify ? ["sh", hub.launcher] : ["sh", hub.launcher, "--no-notify"]
     stdinEnabled: true
     stdout: SplitParser {
       onRead: function(line) {
@@ -237,7 +242,13 @@ Scope {
         if (text === "") return
         try {
           const data = JSON.parse(text)
-          if (!data || data.error !== undefined) return
+          if (!data) return
+          if (data.error === "engine_unavailable") {
+            hub.engineMissing = String(data.version)
+            hub.engineReason = data.reason ? String(data.reason) : ""
+            return
+          }
+          if (data.error !== undefined) return
           hub.apply(data)
         } catch (e) {
         }
@@ -252,6 +263,7 @@ Scope {
     }
     onExited: function(exitCode) {
       if (hub.consumers.length === 0) return
+      restart.interval = exitCode === 3 ? 60000 : 5000
       if (hub.stopped) {
         hub.stopped = false
         quickRestart.start()

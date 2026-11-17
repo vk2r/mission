@@ -21,6 +21,8 @@ Panel {
 
   readonly property var rows: EngineHub.bots
   readonly property bool hasData: EngineHub.ready
+  readonly property string engineMissing: EngineHub.engineMissing
+  readonly property string engineReason: EngineHub.engineReason
   readonly property bool appRunning: EngineHub.appRunning
   readonly property bool launching: EngineHub.launching
   readonly property bool installed: EngineHub.installed

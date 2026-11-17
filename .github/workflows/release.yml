@@ -1,5 +1,9 @@
 name: Release
 
+# Pushing a tag vX.Y.Z builds the engine from that commit and tests it (job build, read-only
+# token, no secrets), then a second job that never checks out or runs repository code attests the
+# built file with GitHub's build provenance and publishes the Release. Nothing is committed back:
+# bin/run-engine downloads the engine of the plugin's exact version from that Release.
 on:
   push:
     tags: ["v*"]
@@ -8,26 +12,95 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    uses: ./.github/workflows/verify-binaries.yml
-
-  release:
-    needs: verify
+  build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Tag matches manifest.json and Cargo.toml
+        run: |
+          manifest=$(jq -r .version manifest.json)
+          cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' engine/Cargo.toml | head -n1)
+          test "$GITHUB_REF_NAME" = "v$manifest" || { echo "tag $GITHUB_REF_NAME does not match manifest.json version $manifest" >&2; exit 1; }
+          test "$manifest" = "$cargo" || { echo "manifest.json version $manifest differs from engine/Cargo.toml version $cargo" >&2; exit 1; }
+
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          install: true
+          cache: false
+
+      - name: Audit dependencies
+        run: mise run audit
+
+      - name: Build
+        run: scripts/build-engine.sh "$PWD/target/stage/engine"
+
+      - name: Test
+        run: ENGINE="$PWD/target/stage/engine" mise run test
+
+      - name: Checksums
+        run: cd target/stage && sha256sum engine | tee SHA256SUMS
+
+      # Only built files leave this job. The job below does not check out or run repo code.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: target/stage/
+          if-no-files-found: error
+          retention-days: 1
+
+  # No checkout and no repo code: it only handles the files built above.
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: target/package
+
+      - name: Restore the executable bit (artifacts do not keep it)
+        run: chmod +x target/package/engine
+
+      - name: Checksum still matches
+        run: cd target/package && sha256sum -c SHA256SUMS
+
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: target/package/engine
+
+      - name: Keep the signed attestation
+        run: cp "${{ steps.attest.outputs.bundle-path }}" target/package/provenance.sigstore.json
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
+          cd target/package
+          cat > notes.md <<NOTES
+          Engine of plugin version ${GITHUB_REF_NAME#v} (x86_64 Linux), built from this tag by .github/workflows/release.yml and attested with GitHub build provenance. bin/run-engine downloads it on first run and checks it.
+
+          Verify by hand after downloading the files:
+
+          \`\`\`sh
+          sha256sum -c SHA256SUMS
+          gh attestation verify engine --repo $GITHUB_REPOSITORY --bundle provenance.sigstore.json
+          \`\`\`
+          NOTES
           gh release create "$GITHUB_REF_NAME" \
-            bin/engine bin/SHA256SUMS bin/provenance.sigstore.json \
+            engine SHA256SUMS provenance.sigstore.json \
             --verify-tag \
             --title "$GITHUB_REF_NAME" \
-            --notes "Engine built by .github/workflows/build-engine.yml and verified against its build provenance (provenance.sigstore.json). Verify with: gh attestation verify engine --repo $GITHUB_REPOSITORY --bundle provenance.sigstore.json"
+            --notes-file notes.md

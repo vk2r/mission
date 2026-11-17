@@ -302,6 +302,18 @@ Item {
       }
 
       Text {
+        visible: page.host.engineMissing !== ""
+        width: parent.width
+        text: page.host.t("engineUnavailable", [page.host.engineMissing]) + (page.host.engineReason !== "" ? ": " + page.host.engineReason : "")
+        color: page.host.dim
+        font.family: page.host.fontFamily
+        font.pixelSize: Style.font.body
+        horizontalAlignment: Text.AlignHCenter
+        topPadding: Style.space(8)
+        bottomPadding: Style.space(8)
+      }
+
+      Text {
         visible: page.host.hasData && page.host.rows.length === 0
         width: parent.width
         text: page.host.t("noActivity")

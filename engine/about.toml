@@ -25,3 +25,21 @@ ignore-build-dependencies = true
 ignore-dev-dependencies = true
 
 private = { ignore = true }
+
+# sha1_smol ships one LICENSE file with the BSD-3-Clause text for the crate and
+# a separate MIT notice for src/simd.rs; cargo-about cannot match the combined
+# file and would fall back to the generic SPDX text without its copyright lines.
+[sha1_smol.clarify]
+license = "BSD-3-Clause AND MIT"
+
+[[sha1_smol.clarify.files]]
+path = "LICENSE"
+license = "BSD-3-Clause"
+checksum = "3d7f7841688ba4c69892be4df5dd7a2c114d3ac8b2113953a6e3a35d7f86c657"
+end = "SUCH DAMAGE."
+
+[[sha1_smol.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "1c8db46070def00d63afdc8c9a3e7184eff58707079482f1fca09174a2f3e26f"
+start = "src/simd.rs is licensed under the MIT license:"

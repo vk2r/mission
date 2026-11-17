@@ -16,15 +16,15 @@ The build tools are pinned in `mise.toml`: the Rust toolchain, `cargo-deny` for 
 
 ```sh
 mise install            # Rust, cargo-deny, cargo-about, uv
-mise run build          # rebuild bin/engine
+mise run build          # build the engine into bin/engine.local (ignored by git)
 mise run test           # engine tests + the translation check
 mise run audit          # advisories, bans, licences and sources of every crate
 mise run licenses       # regenerate licenses/THIRD-PARTY.txt (after changing dependencies)
 mise run validate       # omarchy plugin validate .
-mise run snapshot       # print one snapshot from bin/engine (bin/engine --once | jq .)
+mise run snapshot       # print one snapshot from the local build (bin/engine.local --once | jq .)
 mise run preview        # regenerate preview.png and preview.webp from assets/presentation.pptx
-mise run publish        # push main to GitHub, wait for the signed binary, then push to Forgejo
-mise run publish -- v1.2.3   # the same, then tag that version and push the tag to both (starts release.yml)
+mise run publish        # tag the version in manifest.json, push the tag to Forgejo, wait for its GitHub Release, then push main
+mise run publish -- v1.2.3   # the same, after setting that version in manifest.json and engine/Cargo.toml
 ```
 
 ```sh
@@ -36,7 +36,7 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # from engine/: regenerate engi
 - `mise run preview` runs `scripts/make-preview.py` through `uv`, which installs its pinned Pillow in an isolated environment. It draws the first slide of `assets/presentation.pptx` with the MausBot pill stretched to hold the crew from `assets/preview/crew.webp`: `preview.webp` is the 10 s animated loop the README shows, and `preview.png` is one frame of it (`STILL_FRAME`, all five avatars upright), the still the plugin marketplace shows, since it flattens every preview to a single frame. The crew's order (`CREW_ORDER`), size and spacing are constants at the top of the script. Edit the presentation, not the images, and regenerate both.
 - Running from a checkout: symlink the project into the plugins folder under the plugin's own id — `ln -s ~/Projects/Software/mission ~/.config/omarchy/plugins/io.github.vk2r.mission` — then add **Mission** to the bar from Omarchy's bar settings and restart the shell once (`omarchy restart shell`). Omarchy installs plugins with a plain `git clone` and never builds, so this is the development path only.
 - Cargo builds into `~/.cache/openmausbot-engine/target`, outside the plugin folder, because Omarchy reloads a plugin whenever a file in it changes.
-- `bin/` holds only `engine`. Omarchy installs plugins with a plain `git clone` and never builds, so the binary is committed and CI builds it (see [Binaries and releases](#binaries-and-releases)); a local `mise run build` is only for testing. Run `git config core.hooksPath .githooks` once per clone: its `pre-commit` hook refuses commits that touch `bin/engine`, `bin/SHA256SUMS` or `bin/provenance.sigstore.json`, so drop a local build with `git restore --staged --worktree bin/engine`.
+- `bin/` tracks only `run-engine`. Omarchy installs plugins with a plain `git clone` and never builds, so the engine of each version comes from that version's GitHub Release and `bin/run-engine` downloads it (see [Binaries and releases](#binaries-and-releases)). `mise run build` writes `bin/engine.local`, which git ignores and `bin/run-engine` uses while it matches the manifest version; `bin/engine` and `bin/engine-*` are never committed.
 - Commit `engine/Cargo.lock`, and `licenses/THIRD-PARTY.txt` after `mise run licenses`, when the dependencies change.
 - The JSON the engine prints is the contract with the QML (`EngineHub.qml` → `BarWidget.qml` / `Panel.qml`); keep its shape when changing the engine. `engine/tests/daemon.rs` asserts it.
 
@@ -47,7 +47,7 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # from engine/: regenerate engi
 | `manifest.json`                  | plugin manifest (`bar-widget`)                                                                     |
 | `qmldir`                         | registers the one engine hub singleton for the plugin's own directory                              |
 | `BarWidget.qml`                  | the icon, its turning stars and the panel loader; it draws, it never polls                         |
-| `EngineHub.qml`                  | `pragma Singleton`: one `bin/engine` for the whole shell, and the one snapshot every widget reads  |
+| `EngineHub.qml`                  | `pragma Singleton`: one engine for the whole shell, and the one snapshot every widget reads  |
 | `Panel.qml`                      | the panel host: the card, the keyboard, the page in view and the words every page uses             |
 | `panel/Home.qml`                 | the team page: the hierarchy, and the footer (the spend in one sentence, and the costs button)     |
 | `panel/Settings.qml`             | language, the cost period, notifications and the widget options                                    |
@@ -59,12 +59,12 @@ UPDATE_GOLDEN=1 cargo test --bin engine golden   # from engine/: regenerate engi
 | `components/CompactDropdown.qml` | the small selector the settings page uses                                                          |
 | `lang/index.js`, `lang/*.js`     | the eight languages (`index.js` is the loader); `en`, `es`, `de`, `fr`, `it`, `nl`, `pl`, `pt`     |
 | `mascot/mascot.json`             | the app's own mascot catalogue: ten bodies and twenty-five faces, extracted from the installed app |
-| `engine/`                        | the Rust sources of `bin/engine` (daemon, roster, mascots, Hyprland, log follower, spend)          |
-| `bin/engine`                     | the binary the bar runs: one JSON line per change, orders on stdin                                 |
+| `engine/`                        | the Rust sources of the engine (daemon, roster, mascots, Hyprland, log follower, spend)          |
+| `bin/run-engine`                 | starts the engine of the manifest version (local build, installed, or downloaded and verified)      |
 
 ## The engine
 
-`bin/engine` without arguments is the daemon the bar runs: one JSON line per change on stdout, orders (`refresh`, `show`, `hide`, `toggle`, `ack`) on stdin, and EOF on stdin ends it — which is how a widget taken off the bar leaves no process behind. One line carries `v`, `ok`, `window`, `alert`, `busy`, `working`, `bots` and `costs`.
+The engine without arguments is the daemon the bar runs: one JSON line per change on stdout, orders (`refresh`, `show`, `hide`, `toggle`, `ack`) on stdin, and EOF on stdin ends it — which is how a widget taken off the bar leaves no process behind. One line carries `v`, `ok`, `window`, `alert`, `busy`, `working`, `bots` and `costs`.
 
 - **One read per source.** A tick costs a `PRAGMA data_version` on the app's database and a few `stat()` calls; the answers are rebuilt only for the source that changed, and a tick that finds nothing says nothing.
 - **Spend.** `usage.rs` sums `usage/YYYY-MM.jsonl` over three windows that all end today: `day`, `week` (the last 7 days) and `month` (the last 30), with a two-day margin when it picks the files to read, because a record stamped in UTC can land on another local date in a zone ahead of it. Each range also carries `series`, one bar per hour of the day or per day of the window, filled by the same read so the bars and the total cannot disagree, and two splits of the same money, `byBot` and `byModel`: the model is the record's `model` field, trimmed, stripped of control characters and cut to 60 bytes, so a malformed line cannot stretch a row; each `byModel` row also names the live bot that spent most on it (`bot`, absent when only deleted or unnamed bots used it), which the costs page turns into the row's colour. A corrupt line is skipped, never fatal.
@@ -79,12 +79,12 @@ At rest the daemon costs about 0.012 % of one core and 7.8 MiB, with no child pr
 To watch the daemon yourself:
 
 ```sh
-bin/engine --once                     # the line, once, in a terminal
-bin/engine                            # lines as things change; Ctrl-D ends it
-printf 'hide\nshow\n' | bin/engine     # orders go in on stdin, and the pipe closing ends it
+bin/engine.local --once                     # the line, once, in a terminal
+bin/engine.local                      # lines as things change; Ctrl-D ends it
+printf 'hide\nshow\n' | bin/engine.local # orders go in on stdin, and the pipe closing ends it
 ```
 
-The clock can be moved for a test — `bin/engine --once --now 2026-11-02T00:00:05-03:00` — which is how midnight and the five-minute `failed` grace are checked without waiting for them.
+The clock can be moved for a test — `bin/engine.local --once --now 2026-11-02T00:00:05-03:00` — which is how midnight and the five-minute `failed` grace are checked without waiting for them.
 
 ## The usage ledger
 
@@ -96,7 +96,7 @@ The clock can be moved for a test — `bin/engine --once --now 2026-11-02T00:00:
 
 ## One engine for every screen
 
-`EngineHub.qml` is a QML singleton (registered in `qmldir`). This shell runs one bar, and that bar builds one widget per monitor inside a single QML engine, so the singleton is one object for every screen, and it owns the one `bin/engine` process: `snapshot`, `state`, `alerting`, `teamBusy`, `costs` and the animation clocks `spin` and `slowSpin` are read by both bars from the same values, and a second engine never starts.
+`EngineHub.qml` is a QML singleton (registered in `qmldir`). This shell runs one bar, and that bar builds one widget per monitor inside a single QML engine, so the singleton is one object for every screen, and it owns the one engine process (started through `bin/run-engine`): `snapshot`, `state`, `alerting`, `teamBusy`, `costs` and the animation clocks `spin` and `slowSpin` are read by both bars from the same values, and a second engine never starts.
 
 The widgets register with the hub (`attach`/`detach`); when the last one goes the engine stops, so a widget taken off the bar leaves no process behind. The orders the widgets send — `show`, `hide`, `toggle`, `ack`, `refresh` — go back over the engine's stdin, so a click starts no process at all.
 
@@ -190,13 +190,32 @@ A sentence that counts something is one translation, not pieces glued together: 
 
 ## Binaries and releases
 
-`bin/engine` is built and signed by [`build-engine.yml`](.github/workflows/build-engine.yml) on every push to `main` that changes `engine/`, `mise.toml`, `scripts/build-engine.sh` or the workflow itself. It runs the dependency audit and the tests first — if either fails, nothing is signed — then signs a build provenance attestation, commits `bin/engine` with `SHA256SUMS` and the attestation as `provenance.sigstore.json`, and starts [`verify-binaries.yml`](.github/workflows/verify-binaries.yml). [`release.yml`](.github/workflows/release.yml) publishes those files on a `v*` tag without rebuilding.
+The engine is not in git. A version is one thing: `manifest.json` holds the number, the tag `vX.Y.Z` points at the commit with that number, and [`release.yml`](.github/workflows/release.yml) builds the engine from exactly that commit when the tag reaches GitHub. Its build job (read-only token, no secrets) checks that the tag equals the `version` in `manifest.json` and in `engine/Cargo.toml`, runs the dependency audit and the tests, builds `engine` and its `SHA256SUMS`; a second job that never checks out repository code attests the file with GitHub's build provenance and publishes the Release `vX.Y.Z` with `engine`, `SHA256SUMS` and `provenance.sigstore.json`. Nothing is committed back to a branch.
 
-Publish with `mise run publish` (`scripts/publish.sh`) from a clean `main`. It pushes to the `github` remote; if the push touches the paths above it waits for `build-engine.yml` on that commit (polling the GitHub API, `GITHUB_TOKEN` optional for the rate limit) and stops without touching Forgejo if the build fails or takes too long. It then fast-forwards to the commit with the signed binary and pushes the same history to the `forgejo` remote. It never forces. To release a version, pass it after `--`: `mise run publish -- v1.2.3`. Bump `version` in `manifest.json` and commit it first, then use that same number with a `v` in front. The script refuses a tag that does not start with `v` (`release.yml` only listens to `v*`) or that already exists, and it creates the annotated tag only after the signed binary has landed, so the tag always points at a commit with its binary; it then pushes the tag to GitHub, where `release.yml` publishes the files, and to Forgejo. Without a version it publishes `main` and creates no tag. Remote names, repository, API URL and timeouts can be overridden with the `PUBLISH_*` variables at the top of the script.
+`bin/run-engine` is what `EngineHub.qml` runs (`sh bin/run-engine`), and it is the only tracked file in `bin/` (`.gitignore` ignores the rest). It reads the version from `manifest.json` and starts only that version's engine:
 
-To check the binary yourself:
+1. `bin/engine.local`, the build `mise run build` makes, only if `bin/engine.local.version` equals the manifest version (so a stale local build is never used after a version change);
+2. `bin/engine-X.Y.Z`, already downloaded;
+3. otherwise it downloads `engine`, `SHA256SUMS` and `provenance.sigstore.json` from `https://github.com/vk2r/mission/releases/download/vX.Y.Z/` (HTTPS only, with timeouts and a size limit), requires the checksum to match, **and** requires the build attestation to be valid for `vk2r/mission` and `release.yml@refs/tags/vX.Y.Z` (checked with `cosign verify-blob-attestation`, so `cosign` must be installed). Only then it installs `bin/engine-X.Y.Z`, deletes engines of other versions and runs it.
+
+Without network, or if a check fails, it runs no engine: it prints `{"error":"engine_unavailable","version":"X.Y.Z",...}` and exits 3; the hub shows "Engine X.Y.Z unavailable" with the reason after a colon (tooltip and panel) and tries again after a minute. It never runs an engine of another version, and `omarchy plugin add` (a plain `git clone`) needs no network beyond the clone. **The attestation is required, as in pxu:** `SHA256SUMS` comes from the same Release as the file, so the checksum only proves the download is intact, not who built it; whoever could replace the Release could replace both. Without `cosign` the launcher fails closed ("install cosign to verify the engine"). `gh` is not used as a verifier: `gh attestation verify` could not be tied to the exact tag in a way that was tested here. The only way past it is the explicit opt-out `MISSION_SKIP_ATTESTATION=1` in the engine's environment, which accepts the checksum alone and prints a warning on every run. `MISSION_REPO` and `MISSION_RELEASE_BASE` (which admits `file://`) exist for tests and only count with `MISSION_TEST=1`; otherwise the repository is fixed to `vk2r/mission` over HTTPS. `sh bin/run-engine --verify-only DIR` downloads and verifies a Release into an empty directory with the same checks (and no opt-out), installing and running nothing; `publish.sh` uses it.
+
+Branches: daily work goes on `dev`; `main` only moves with published versions and always points at a tag. `omarchy plugin update` pulls `main`, so the interface and the engine it asks for are always the same version, and the Release of that version already exists when `main` gets there.
+
+Publish with `mise run publish` (`scripts/publish.sh`), on `dev` with a clean tree; `mise run publish -- v1.2.0` first sets that version in `manifest.json`, `engine/Cargo.toml` and `engine/Cargo.lock` and commits it. Without an argument it publishes the version already in `manifest.json`. It only writes to Forgejo; GitHub is only read, to refuse a tag that already exists there at another commit. Forgejo has a push mirror to GitHub (every ref, sync on push), so:
+
+1. it creates the annotated tag `vX.Y.Z` on the commit and pushes **only the tag** to Forgejo (`main` stays where it was, so the mirror cannot carry a `main` whose engine does not exist);
+2. it waits for the Release `vX.Y.Z` on GitHub to exist, not be a draft and have `engine`, `SHA256SUMS` and `provenance.sigstore.json` (polling the API every `PUBLISH_POLL_INTERVAL` s, at most `PUBLISH_TIMEOUT` s, 1800 by default; `GITHUB_TOKEN` is optional, for the rate limit), and stops early if the `release.yml` run for that commit failed;
+3. it requires a `release.yml` run for that commit that finished in `success`, downloads the three assets to a temporary directory and verifies them with `bin/run-engine --verify-only` (checksum plus the attestation of `release.yml@refs/tags/vX.Y.Z`, no opt-out; needs `cosign`); any failure stops here with `main` untouched;
+4. only then it checks that GitHub's tag points at the same commit and pushes that commit to `main` on Forgejo (fast-forward, never forced; the script refuses if Forgejo's `main` is not an ancestor of `HEAD`), and moves local `main` along if it can.
+
+If the time runs out it stops before step 4 and says so; run `mise run publish` again to keep waiting (the tag is already pushed). If the build failed, the tag stays on both hosts: fix it and publish a new version (a published tag is never moved). The script does not use git remotes: it builds the URLs from `FORGEJO_URL` and `GITHUB_URL` plus the name of the repository folder (`mission`), read from a `.env` at the repository root (ignored by git); it stops if either is missing:
 
 ```sh
-(cd bin && sha256sum -c SHA256SUMS)
-gh attestation verify bin/engine --repo vk2r/mission --bundle bin/provenance.sigstore.json
+FORGEJO_URL=<forgejo account base URL>
+GITHUB_URL=<github account base URL>
 ```
+
+The API URL, repository and timeouts can be overridden with the `PUBLISH_*` variables at the top of the script (they exist for the tests).
+
+To check a Release by hand: `sha256sum -c SHA256SUMS` and `cosign verify-blob-attestation --bundle provenance.sigstore.json --type slsaprovenance1 --certificate-identity https://github.com/vk2r/mission/.github/workflows/release.yml@refs/tags/vX.Y.Z --certificate-oidc-issuer https://token.actions.githubusercontent.com engine`.

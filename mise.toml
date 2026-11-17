@@ -8,7 +8,7 @@ uv = "0.13.7"
 CARGO_TARGET_DIR = "{{env.HOME}}/.cache/openmausbot-engine/target"
 
 [tasks.build]
-description = "Build bin/engine"
+description = "Build the engine into bin/engine.local (git ignores it; bin/run-engine uses it while it matches manifest.json)"
 run = "scripts/build-engine.sh"
 
 [tasks.test]
@@ -34,12 +34,12 @@ description = "Check the crates for advisories, licences and sources"
 run = "cargo-deny --manifest-path engine/Cargo.toml check"
 
 [tasks.licenses]
-description = "Regenerate licenses/THIRD-PARTY.txt from the crates linked into bin/engine"
+description = "Regenerate licenses/THIRD-PARTY.txt from the crates linked into the engine"
 run = "cargo about generate --locked --fail -m engine/Cargo.toml engine/about.hbs -o licenses/THIRD-PARTY.txt"
 
 [tasks.snapshot]
-description = "Print one snapshot from bin/engine"
-run = "bin/engine --once | jq ."
+description = "Print one snapshot from the local build"
+run = "bin/engine.local --once | jq ."
 
 [tasks.validate]
 description = "Validate the plugin manifest"
@@ -50,5 +50,5 @@ description = "Render preview.png (marketplace still) and preview.webp (README, 
 run = "uv run --script scripts/make-preview.py"
 
 [tasks.publish]
-description = "Push main to GitHub, wait for the signed binary commit, then push the same history to Forgejo"
+description = "Tag the commit, push the tag to Forgejo, wait for the GitHub Release, then fast-forward main on Forgejo"
 run = "scripts/publish.sh"

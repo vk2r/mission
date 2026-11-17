@@ -1,0 +1,102 @@
+#!/bin/sh
+# Starts the engine that belongs to this plugin's version (manifest.json) and nothing else.
+# Run by EngineHub.qml as `sh bin/run-engine [engine args]`.
+#   1. bin/engine.local, a build made here by `mise run build`, only if it was built for the
+#      same manifest version (bin/engine.local.version);
+#   2. bin/engine-<version>, the engine of the GitHub Release v<version>, downloaded once;
+#   3. otherwise it downloads it: engine, SHA256SUMS and provenance.sigstore.json from
+#      https://github.com/vk2r/mission/releases/download/v<version>/, checks the checksum AND the
+#      build attestation (made by release.yml for that tag, checked with cosign), and only then
+#      installs and runs it.
+# Without network, without cosign, or if a check fails, it runs no engine: it prints one JSON line
+# {"error":"engine_unavailable","version":"X.Y.Z","reason":"..."}, the reason on stderr, and exits 3.
+# MISSION_SKIP_ATTESTATION=1 is the only way past a missing attestation check: the checksum alone
+# comes from the same Release as the file, so it cannot detect a replaced Release. It warns every run.
+# `sh bin/run-engine --verify-only DIR` downloads and verifies the Release into the empty directory DIR
+# with the same checks (and no opt-out), installs nothing and runs nothing; scripts/publish.sh uses it.
+# MISSION_REPO and MISSION_RELEASE_BASE (which admits file://) only count with MISSION_TEST=1.
+set -u
+
+dir=$(cd "$(dirname "$0")" && pwd)
+root=$(dirname "$dir")
+repo=vk2r/mission
+base=https://github.com/$repo/releases/download
+proto=https
+if [ "${MISSION_TEST:-0}" = 1 ]; then
+  repo=${MISSION_REPO:-$repo}
+  if [ -n "${MISSION_RELEASE_BASE:-}" ]; then base=$MISSION_RELEASE_BASE; proto=https,file; else base=https://github.com/$repo/releases/download; fi
+fi
+version=$(sed -n 's/^  "version": "\([^"]*\)",$/\1/p' "$root/manifest.json" 2>/dev/null | head -n 1)
+
+unavailable() {
+  echo "mission: engine $version unavailable: $1" >&2
+  printf '{"error":"engine_unavailable","version":"%s","reason":"%s"}\n' "$version" "$1"
+  exit 3
+}
+
+case $version in
+  [0-9]*.[0-9]*.[0-9]*) ;;
+  *) version=unknown; unavailable "manifest.json has no valid version" ;;
+esac
+case $version in *[!0-9.]*) version=unknown; unavailable "manifest.json has no valid version" ;; esac
+
+# Downloads the three assets of the Release of this version into $1 and checks them.
+# Exits through unavailable() on any failure.
+fetch_verified() {
+  out=$1
+  tag=v$version
+  for name in engine SHA256SUMS provenance.sigstore.json; do
+    curl -fsSL --proto "=$proto" --proto-redir =https --connect-timeout 10 --max-time 180 \
+      --max-filesize 67108864 -o "$out/$name" "$base/$tag/$name" 2>/dev/null \
+      || unavailable "cannot download $name from the release $tag"
+  done
+
+  # SHA256SUMS must have exactly one line, for engine, and the file must match it.
+  [ "$(wc -l <"$out/SHA256SUMS")" -eq 1 ] || unavailable "SHA256SUMS is not a single line"
+  want=$(awk 'NF == 2 && $2 == "engine" && $1 ~ /^[0-9a-f]{64}$/ { print $1 }' "$out/SHA256SUMS")
+  [ -n "$want" ] || unavailable "SHA256SUMS does not name engine"
+  got=$(sha256sum "$out/engine" | cut -d' ' -f1)
+  [ "$got" = "$want" ] || unavailable "the checksum of engine does not match SHA256SUMS"
+
+  # The checksum comes from the same Release as the file; the attestation, signed by GitHub for
+  # release.yml at this exact tag, is what shows who built it. Required, as in pxu.
+  if [ "${MISSION_SKIP_ATTESTATION:-0}" = 1 ] && [ "${verify_only:-0}" != 1 ]; then
+    echo "mission: WARNING: MISSION_SKIP_ATTESTATION=1: the build attestation of engine was NOT verified (checksum only)" >&2
+  elif command -v cosign >/dev/null 2>&1; then
+    cosign verify-blob-attestation --bundle "$out/provenance.sigstore.json" --type slsaprovenance1 \
+      --certificate-identity "https://github.com/$repo/.github/workflows/release.yml@refs/tags/$tag" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com "$out/engine" >/dev/null 2>&1 \
+      || unavailable "the build attestation of engine is not valid for $repo at $tag"
+  else
+    unavailable "install cosign to verify the engine (or set MISSION_SKIP_ATTESTATION=1 to accept the checksum alone)"
+  fi
+}
+
+if [ "${1:-}" = --verify-only ]; then
+  [ $# -eq 2 ] && [ -d "$2" ] || unavailable "usage: run-engine --verify-only DIR"
+  verify_only=1
+  fetch_verified "$2"
+  exit 0
+fi
+
+if [ -x "$dir/engine.local" ] && [ "$(cat "$dir/engine.local.version" 2>/dev/null)" = "$version" ]; then
+  exec "$dir/engine.local" "$@"
+fi
+
+installed=$dir/engine-$version
+if [ -x "$installed" ]; then
+  exec "$installed" "$@"
+fi
+
+tmp=$(mktemp -d "$dir/.fetch.XXXXXX" 2>/dev/null) || unavailable "cannot write to $dir"
+trap 'rm -rf "$tmp"' EXIT INT TERM
+fetch_verified "$tmp"
+
+chmod 755 "$tmp/engine"
+mv -f "$tmp/engine" "$installed" || unavailable "cannot install $installed"
+for old in "$dir"/engine-*; do
+  [ "$old" = "$installed" ] || rm -f "$old"
+done
+rm -rf "$tmp"
+trap - EXIT INT TERM
+exec "$installed" "$@"

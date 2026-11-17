@@ -76,6 +76,7 @@ BarWidget {
   Component.onDestruction: EngineHub.detach(root)
 
   function tooltipText() {
+    if (EngineHub.engineMissing !== "") return root.t("engineUnavailable", [EngineHub.engineMissing]) + (EngineHub.engineReason !== "" ? ": " + EngineHub.engineReason : "")
     var base = root.t("tooltip")
     return root.alerting ? base + " · " + root.t("newActivity") : base
   }

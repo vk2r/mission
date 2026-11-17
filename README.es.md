@@ -23,7 +23,7 @@ MausBot solo crea una bandeja del sistema en Windows, así que en Linux su venta
 
 ## Instalación
 
-Requiere **Omarchy Quattro** en **x86_64** y la app **MausBot** para Linux. No hay que compilar nada: el motor viene precompilado.
+Requiere **Omarchy Quattro** en **x86_64** y la app **MausBot** para Linux. No hay que compilar nada: al primer arranque el plugin descarga el motor precompilado de su propia versión desde el Release de GitHub de este repositorio y lo comprueba (checksum y atestación de build, así que `cosign` tiene que estar instalado), así que necesita internet una vez y de nuevo tras cada actualización. Sin red, el widget avisa que el motor no está disponible y nunca ejecuta el motor de otra versión.
 
 ```sh
 omarchy plugin add https://github.com/vk2r/mission

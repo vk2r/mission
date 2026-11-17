@@ -23,7 +23,7 @@ MausBot only builds a system tray on Windows, so on Linux its window has no way 
 
 ## Install
 
-Requires **Omarchy Quattro** on **x86_64** and the **MausBot** app for Linux. Nothing needs to be compiled: the engine ships prebuilt.
+Requires **Omarchy Quattro** on **x86_64** and the **MausBot** app for Linux. Nothing needs to be compiled: on first run the plugin downloads the prebuilt engine of its own version from this repository's GitHub Release and checks it (checksum and build attestation, so `cosign` must be installed), so it needs internet once and again after each update. Without it the widget says the engine is unavailable and never runs an engine of another version.
 
 ```sh
 omarchy plugin add https://github.com/vk2r/mission

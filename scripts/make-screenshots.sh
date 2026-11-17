@@ -6,7 +6,7 @@ out="$root/screenshots"
 id="io.github.vk2r.mission"
 shell_json="$HOME/.config/omarchy/shell.json"
 work=""
-real_engine="$root/bin/engine"
+real_engine="$root/bin/engine.local"
 output="${SHOT_OUTPUT:-HDMI-A-1}"
 
 mkdir -p "$out"
@@ -38,7 +38,7 @@ restore() {
     cp -p "$work/shell.json.orig" "$shell_json.new" && mv -f "$shell_json.new" "$shell_json"
   fi
   rm -rf "$work"
-  say "restored bin/engine and shell.json"
+  say "restored bin/engine.local and shell.json"
 }
 trap restore EXIT
 trap 'exit 130' INT TERM
@@ -214,7 +214,7 @@ all_scenes="home-launch home-noapp home-bots-one home-bots-few home-bots-mixed h
 
 swap_in() {
   [[ -x $real_engine ]] || { say "missing $real_engine (run 'mise run build')"; exit 1; }
-  [[ "$(head -c2 "$real_engine")" != '#!' ]] || { say "bin/engine is a wrapper left by an interrupted run (run 'mise run build')"; exit 1; }
+  [[ "$(head -c2 "$real_engine")" != '#!' ]] || { say "bin/engine.local is a wrapper left by an interrupted run (run 'mise run build')"; exit 1; }
   cp -p "$real_engine" "$work/engine.real"
   cp -p "$shell_json" "$work/shell.json.orig"
   scene "${1:-home-bots-mixed}" >/dev/null

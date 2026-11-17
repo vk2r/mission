@@ -59,6 +59,7 @@ var STRINGS = {
     "costsPeak": "max {cost}",
     "costsTotal": "Totaal",
     "noActivity": "Nog geen teamactiviteit",
+    "engineUnavailable": "Engine {0} niet beschikbaar",
     "settings": "Instellingen",
     "popOut": "Losmaken als zwevend venster",
     "dockTip": "Weer vastzetten aan de balk",

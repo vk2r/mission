@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-engine="${ENGINE:-$root/bin/engine}"
+engine="${ENGINE:-$root/bin/engine.local}"
 [[ -x $engine ]] || { echo "check-silent: no engine at $engine" >&2; exit 1; }
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/omb-silent.XXXXXX")"

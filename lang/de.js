@@ -59,6 +59,7 @@ var STRINGS = {
     "costsPeak": "max. {cost}",
     "costsTotal": "Gesamt",
     "noActivity": "Noch keine Team-Aktivität",
+    "engineUnavailable": "Engine {0} nicht verfügbar",
     "settings": "Einstellungen",
     "popOut": "Als schwebendes Fenster lösen",
     "dockTip": "Wieder an die Leiste andocken",

@@ -1,3 +1,9 @@
 engine/target/
+development/
 
 /shell.json
+.env
+
+# bin/ only keeps run-engine: the engine itself is built by release.yml or locally and never committed
+/bin/*
+!/bin/run-engine
