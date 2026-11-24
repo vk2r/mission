@@ -10,11 +10,16 @@ use std::time::{Duration, Instant};
 use jiff::{SignedDuration, Timestamp, civil};
 use serde_json::{Value, json};
 
-use crate::db::{Assignments, Database};
-use crate::hypr::{self, Desktop, Hyprland, Monitor, Order, Window};
-use crate::logwatch::{self, Emitter, Notifier, Tail};
-use crate::ledger::Ledger;
-use crate::{alert, avatars, launch, paths, roster, skin, usage};
+use crate::avatar::looks::Cheers;
+use crate::avatar::{publish as avatars, skin};
+use crate::desktop::hypr::{self, Desktop, Hyprland, Monitor, Order, Window};
+use crate::desktop::launch;
+use crate::notify::alert;
+use crate::notify::logwatch::{self, Emitter, Notifier, Tail};
+use crate::team::db::{Assignments, Database};
+use crate::team::{frames, roster};
+use crate::usage::ledger::Ledger;
+use crate::{paths, usage};
 
 const TICK: Duration = Duration::from_secs(1);
 const WINDOW_PERIOD: Duration = Duration::from_secs(2);
@@ -90,6 +95,8 @@ pub struct Engine {
 
     roster: Option<Vec<Value>>,
     roster_stamp: Option<Stamp>,
+    rooms: Option<roster::Rooms>,
+    rooms_stamp: Option<Stamp>,
     database: Option<Database>,
     database_id: Option<(u64, u64)>,
     data_version: Option<i64>,
@@ -100,10 +107,18 @@ pub struct Engine {
     skin_forced: Option<skin::Setting>,
     skin_stamps: Vec<(String, u64, i64, i64)>,
     bots: Vec<roster::Row>,
+    cheers: Cheers,
     busy: bool,
     shown: (bool, i64),
     bots_dirty: bool,
     expiry: Option<f64>,
+    /// The bar asked for moving avatars (its panel is open and animations are on).
+    animate: bool,
+    /// The slot the bar draws an avatar in, in pixels, from `animate <px>`.
+    slot: f64,
+    /// The last frames line named some bots, so the bar has to be told when they stop.
+    framed: bool,
+    frames_pruned: Option<Instant>,
 
     costs: Value,
     usage_stamps: Vec<(String, Option<Stamp>)>,
@@ -148,6 +163,8 @@ impl Engine {
             fresh: true,
             roster: None,
             roster_stamp: None,
+            rooms: None,
+            rooms_stamp: None,
             database: None,
             database_id: None,
             data_version: None,
@@ -158,10 +175,15 @@ impl Engine {
             skin_forced: skin::forced(),
             skin_stamps: Vec::new(),
             bots: Vec::new(),
+            cheers: Cheers::default(),
             busy: false,
             shown: (false, 0),
             bots_dirty: true,
             expiry: None,
+            animate: false,
+            slot: frames::DEFAULT_SLOT_PX,
+            framed: false,
+            frames_pruned: None,
             costs: json!({}),
             usage_stamps: Vec::new(),
             usage_day: None,
@@ -212,6 +234,22 @@ impl Engine {
             self.fresh = true;
             return;
         }
+        if name == "still" {
+            self.animate = false;
+            return;
+        }
+        if let Some(rest) = name.strip_prefix("animate")
+            && (rest.is_empty() || rest.starts_with(char::is_whitespace))
+        {
+            self.animate = true;
+            self.slot = rest
+                .trim()
+                .parse::<f64>()
+                .ok()
+                .filter(|px| px.is_finite() && *px > 0.0)
+                .map_or(frames::DEFAULT_SLOT_PX, |px| px.min(512.0));
+            return;
+        }
         let Some(order) = Order::parse(name) else {
             return;
         };
@@ -220,6 +258,42 @@ impl Engine {
             self.launching = Some(Instant::now());
         }
         self.window_at = None;
+    }
+
+    /// How long until the next frames line is due: `Some` while the bar wants moving avatars and one
+    /// moves, and once more right away to say they stopped.
+    fn frame_period(&self) -> Option<Duration> {
+        let moving = if self.animate { frames::period(&self.bots, self.slot) } else { None };
+        moving.or(self.framed.then_some(Duration::ZERO))
+    }
+
+    /// The frames of the bots that move now, or the line that says none does any more.
+    fn frames(&mut self) -> Option<String> {
+        let moving = self.animate && frames::period(&self.bots, self.slot).is_some();
+        if !moving {
+            if !std::mem::take(&mut self.framed) {
+                return None;
+            }
+            self.prune_at = Some(Instant::now() + PICTURE_GRACE);
+            avatars::prune_aged(&roster::picture_paths(&self.bots), frames::FRAME_GRACE);
+            return Some(frames::clear_line());
+        }
+        let now_ms = self.clock.now().as_millisecond() as f64;
+        let drawn = frames::render(&self.bots, now_ms, self.slot);
+        self.framed = drawn.count > 0;
+        if self.frames_pruned.is_none_or(|at| at.elapsed() >= Duration::from_secs(1)) {
+            let mut keep = roster::picture_paths(&self.bots);
+            keep.extend(drawn.paths);
+            avatars::prune_aged(&keep, frames::FRAME_GRACE);
+            self.frames_pruned = Some(Instant::now());
+        }
+        Some(drawn.line)
+    }
+
+    /// A cheer or a grace period ran out: the next snapshot should say so now, not at the next tick.
+    fn expired(&self) -> bool {
+        let now_ms = self.clock.now().as_millisecond() as f64;
+        self.expiry.is_some_and(|at| now_ms >= at)
     }
 
     fn observe(&mut self, now: Timestamp, force_window: bool) {
@@ -239,6 +313,13 @@ impl Engine {
             let known = self.roster.as_deref().and_then(roster::known);
             known_changed = known != self.known;
             self.known = known;
+        }
+
+        let rooms_stamp = paths::groups_file().as_deref().and_then(stamp_of);
+        if first || rooms_stamp != self.rooms_stamp {
+            self.rooms = roster::read_rooms();
+            self.rooms_stamp = rooms_stamp;
+            bots_dirty = true;
         }
 
         if self.refresh_assignments() {
@@ -411,7 +492,15 @@ impl Engine {
         self.bots_dirty = false;
         let now_ms = now.as_millisecond() as f64;
         let bots = match self.roster.as_deref() {
-            Some(roster) => roster::rows_for_at(roster, self.assignments.as_ref(), now_ms, self.grace, self.festival.as_deref()),
+            Some(roster) => roster::rows_for_at(
+                roster,
+                self.assignments.as_ref(),
+                self.rooms.as_ref(),
+                now_ms,
+                self.grace,
+                self.festival.as_deref(),
+                &mut self.cheers,
+            ),
             None => Vec::new(),
         };
         if bots != self.bots {
@@ -443,6 +532,7 @@ impl Engine {
                 .filter(|at| *at > now_ms)
                 .min_by(f64::total_cmp)
         });
+        self.expiry = [self.expiry, self.cheers.expiry(now_ms)].into_iter().flatten().min_by(f64::total_cmp);
     }
 
     fn read_window(&mut self) {
@@ -562,6 +652,7 @@ pub fn run(options: Options) -> i32 {
     let inbox = reader();
     let mut wake = Instant::now();
     let mut settle: Option<Instant> = None;
+    let mut frame_at = Instant::now();
 
     loop {
         if std::os::unix::process::parent_id() != parent {
@@ -570,6 +661,9 @@ pub fn run(options: Options) -> i32 {
         let force = settle.is_some_and(|at| Instant::now() >= at);
         if force {
             settle = None;
+        }
+        if engine.expired() {
+            wake = Instant::now();
         }
         if force || Instant::now() >= wake {
             let line = match catch_unwind(AssertUnwindSafe(|| engine.tick(force))) {
@@ -584,7 +678,22 @@ pub fn run(options: Options) -> i32 {
             wake = Instant::now() + TICK;
         }
 
-        let next = settle.map_or(wake, |at| at.min(wake));
+        if let Some(period) = engine.frame_period() {
+            if Instant::now() >= frame_at {
+                let line = catch_unwind(AssertUnwindSafe(|| engine.frames())).unwrap_or(None);
+                if let Some(line) = line
+                    && write_line(&line).is_err()
+                {
+                    return 0;
+                }
+                frame_at = Instant::now() + period;
+            }
+        }
+
+        let mut next = settle.map_or(wake, |at| at.min(wake));
+        if engine.frame_period().is_some() {
+            next = next.min(frame_at);
+        }
         let wait = next.saturating_duration_since(Instant::now());
         match inbox.recv_timeout(wait) {
             Ok(Inbox::Order(text)) => {
@@ -602,7 +711,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::hypr::{clients, monitors};
+    use crate::desktop::hypr::{clients, monitors};
 
     fn saved(case: &str) -> (String, String) {
         let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/hypr").join(case);

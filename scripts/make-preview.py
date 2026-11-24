@@ -7,9 +7,10 @@
 
 Both are the slide with the MausBot pill stretched to hold the crew (Atlas,
 Quill, Nova, Sage and Bolt) after the name, "MausBot [crew]". preview.webp is
-the animated one the README shows; preview.png is its STILL_FRAME, the still
-the plugin marketplace shows. The crew comes from assets/preview/crew.webp, a
-10 s loop at 20 fps recorded from the real panel.
+the animated one the README shows, with the crew from assets/preview/crew.webp,
+a 10 s loop at 20 fps where each avatar moves differently; preview.png is the
+still the plugin marketplace shows, with the crew at rest from
+assets/preview/crew-still.png. scripts/make-crew.py records both from the engine.
 
 Usage: scripts/make-preview.py [output-dir]   (default: the repository root)
 """
@@ -25,18 +26,18 @@ from PIL import Image, ImageDraw, ImageFilter, ImageSequence
 ROOT = Path(__file__).resolve().parent.parent
 PPTX = ROOT / "assets" / "presentation.pptx"
 CREW = ROOT / "assets" / "preview" / "crew.webp"
+CREW_STILL = ROOT / "assets" / "preview" / "crew-still.png"
 EMU_PER_PX = 7620  # 1920x1080 pt slide exported at 2400x1350 px
 
 PILL = "pill-mausbot"
-CREW_ORDER = (0, 2, 1, 4, 3)  # crew.webp cells as they go in the pill: Atlas, Quill, Nova, Sage, Bolt
-CREW_SCALE = 0.8  # crew height against the pill's text
-CELL, CELL_PITCH = 53, 66  # each avatar's cell in crew.webp, and how far apart they are
-PITCH = 46        # how far apart they go in the pill, before CREW_SCALE
+CREW_COUNT = 5  # Atlas, Quill, Nova, Sage and Bolt, in the order crew.webp has them
+CREW_SCALE = 0.64  # crew height against the pill's text
+CELL, CELL_PITCH = 80, 82  # each avatar's cell in crew.webp, and how far apart they are
+PITCH = 58        # how far apart they go in the pill, before CREW_SCALE
 TEXT_END = 171    # first pill column past the "t" of "MausBot"
 GAP = 14          # between "MausBot" and the first avatar
 CAP = 24          # the pill's rounded end, short of the "M"
 END_PAD = 28      # last avatar to the pill's edge, as the edge to "M" on the left
-STILL_FRAME = 79  # crew.webp frame for preview.png: all five upright
 
 
 def px(emu):
@@ -122,26 +123,28 @@ def stretch_pill(pill, inner):
 
 
 def arrange(strip):
-    """Lay out the avatars of a crew.webp frame in CREW_ORDER, PITCH apart."""
-    out = Image.new("RGBA", ((len(CREW_ORDER) - 1) * PITCH + CELL, strip.height), (0, 0, 0, 0))
-    for j, cell in enumerate(CREW_ORDER):
-        x = cell * CELL_PITCH
+    """Lay out the avatars of a crew.webp frame, PITCH apart."""
+    out = Image.new("RGBA", ((CREW_COUNT - 1) * PITCH + CELL, strip.height), (0, 0, 0, 0))
+    for j in range(CREW_COUNT):
+        x = j * CELL_PITCH
         out.alpha_composite(strip.crop((x, 0, x + CELL, strip.height)), (j * PITCH, 0))
     return out
 
 
 def make_frames():
-    """The slide with the crew in the pill, one frame per crew.webp frame."""
+    """The slide with the crew in the pill, one frame per crew.webp frame, and the still one with the crew at
+    rest where the loop's avatars stand."""
     kept = {}
     slide = render(skip=(PILL,), keep=kept)
     pill, (pill_x, pill_y) = kept[PILL]
 
     source = Image.open(CREW)
     durations = [f.info.get("duration", 50) for f in ImageSequence.Iterator(source)]
-    crew = []
-    for f in ImageSequence.Iterator(source):
+    def fit(f):
         f = arrange(f.convert("RGBA"))
-        crew.append(f.resize((round(f.width * CREW_SCALE), round(f.height * CREW_SCALE)), Image.LANCZOS))
+        return f.resize((round(f.width * CREW_SCALE), round(f.height * CREW_SCALE)), Image.LANCZOS)
+
+    crew = [fit(f) for f in ImageSequence.Iterator(source)]
     l, t, r, b = visible_box(crew)
     inner = GAP + (r - l) + END_PAD - CAP
     slide.alpha_composite(stretch_pill(pill, inner), (pill_x, pill_y))
@@ -152,7 +155,9 @@ def make_frames():
         frame = slide.copy()
         frame.alpha_composite(f, crew_at)
         frames.append(frame.convert("RGB"))
-    return frames, durations
+    still = slide.copy()
+    still.alpha_composite(fit(Image.open(CREW_STILL)), crew_at)
+    return frames, durations, still.convert("RGB")
 
 
 def make_webp(out, frames, durations):
@@ -167,6 +172,6 @@ def make_png(out, frame):
 
 
 dest = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT
-frames, durations = make_frames()
-make_png(dest / "preview.png", frames[STILL_FRAME])
+frames, durations, still = make_frames()
+make_png(dest / "preview.png", still)
 make_webp(dest / "preview.webp", frames, durations)

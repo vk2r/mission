@@ -95,23 +95,25 @@ Panel {
     return /^file:\/\/\/.*\/[0-9a-f]{16}\.svg$/.test(url) ? url : ""
   }
 
+  // What the engine sends between snapshots for a bot that moves right now: the next picture of an
+  // engine body, or the pose of a cursor or costume. Null while the bot is at rest.
+  function frameOf(row) {
+    var frame = row && row.id !== undefined ? EngineHub.frames[String(row.id)] : undefined
+    return frame ? frame : null
+  }
+
   function avatarSource(row) {
-    return root.avatarFile(row && row.avatar)
+    var frame = root.frameOf(row)
+    return root.avatarFile(frame && frame.avatar ? frame.avatar : row && row.avatar)
   }
 
   function avatarEyes(row) {
     return root.avatarFile(row && row.avatarEyes)
   }
 
-  readonly property var mascotInk: ({
-    blob: 1, capsule: 3, circle: 1, cursor: 3, diamond: 1,
-    drop: 4, hexagon: 2, shield: 3, squircle: 1, star: 3
-  })
-
+  // Where a body's ink starts from the left of its slot: the engine says, in 22nds of the slot.
   function avatarInkInset(row, slot) {
-    var body = row ? String(row.body) : ""
-    var units = mascotInk.hasOwnProperty(body) ? mascotInk[body] : 0
-    return slot / 22 * units
+    return slot / 22 * (row && row.inkInset ? Number(row.inkInset) : 0)
   }
 
   readonly property string lang: hostWidget ? hostWidget.lang : "en"
@@ -134,10 +136,6 @@ Panel {
     if (status === "failed") return root.failedColor
     if (status === "waiting") return root.foreground
     return root.dim
-  }
-
-  function statusFilled(status) {
-    return status === "working" || status === "failed"
   }
 
   function taskFor(row) {

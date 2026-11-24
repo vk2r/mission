@@ -160,6 +160,9 @@ Item {
         id: popOutButton
         anchors.right: gearButton.left
         anchors.verticalCenter: parent.verticalCenter
+        // Same box as the settings button: the two glyphs differ in width, so each would size its own.
+        implicitWidth: gearButton.implicitWidth
+        implicitHeight: gearButton.implicitHeight
         iconText: page.host.floating ? "\udb81\udc04" : "\udb81\udc03"
         bordered: false
         foreground: page.host.foreground

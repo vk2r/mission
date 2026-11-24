@@ -171,6 +171,19 @@ Scope {
 
   property var consumers: []
 
+  // The pictures and poses of the avatars that move right now, by bot id: what the engine sends between
+  // two snapshots (`{"frames": {id: {avatar, pose}}}`). Empty while nothing moves.
+  property var frames: ({})
+  readonly property bool animate: hub.consumers.some(function (w) { return w.avatarsMoving === true })
+  // The biggest avatar slot among the bars that want them moving, in pixels; the engine paces the poses
+  // by it. 0 when none is known, and the engine then takes 22.
+  readonly property real animateSlot: hub.consumers.reduce(function (most, w) {
+    return w.avatarsMoving === true && w.avatarSlot > most ? w.avatarSlot : most
+  }, 0)
+  readonly property string animateOrder: hub.animateSlot > 0 ? "animate " + Math.round(hub.animateSlot) : "animate"
+  onAnimateChanged: hub.send(hub.animate ? hub.animateOrder : "still")
+  onAnimateOrderChanged: if (hub.animate) hub.send(hub.animateOrder)
+
   property bool stopped: false
 
   property string pending: ""
@@ -243,6 +256,10 @@ Scope {
         try {
           const data = JSON.parse(text)
           if (!data) return
+          if (data.frames !== undefined) {
+            hub.frames = data.frames
+            return
+          }
           if (data.error === "engine_unavailable") {
             hub.engineMissing = String(data.version)
             hub.engineReason = data.reason ? String(data.reason) : ""
@@ -256,12 +273,14 @@ Scope {
     }
     onRunningChanged: {
       if (!engineProc.running) return
+      if (hub.animate) engineProc.write(hub.animateOrder + "\n")
       if (hub.pending === "") return
       var order = hub.pending
       hub.pending = ""
       engineProc.write(order + "\n")
     }
     onExited: function(exitCode) {
+      hub.frames = ({})
       if (hub.consumers.length === 0) return
       restart.interval = exitCode === 3 ? 60000 : 5000
       if (hub.stopped) {

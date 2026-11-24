@@ -11,8 +11,8 @@ MausBot solo crea una bandeja del sistema en Windows, así que en Linux su venta
 
 ## Funciones
 
-- **Todo el equipo de un vistazo** — una fila por bot con su estado (trabajando, esperando, inactivo, cancelado, fallido) y la tarea que lleva, dibujado como el mapa de equipo de la propia app: el jefe en una tarjeta propia, el equipo debajo, cada bot con la mascota que le pusiste en la app.
-- **Animado** — varias animaciones en tiempo real: mientras el equipo trabaja, la órbita del icono de la barra y de la marca del panel gira en 3D alrededor de su estrella, y la mascota de cada bot se mueve según su estado, también en modo pixelado.
+- **Todo el equipo de un vistazo** — una fila por bot con su estado (trabajando, esperando, inactivo, cancelado, fallido) y la tarea que lleva, dibujado como el mapa de equipo de la propia app: el jefe en una tarjeta propia, el equipo debajo, cada bot con la mascota que le pusiste en la app, y una pill con el nombre del chat de grupo desde donde responde el bot (un chat directo no lleva ninguna).
+- **Open Bot Avatar, en Rust** — las nueve formas y los veintiún objetos de [Open Bot Avatar](https://github.com/DominikScholz/open-bot-avatar), de Dominik Scholz, portados a Rust y dibujados por el propio motor, animados en tiempo real: el avatar de cada bot se mueve según su estado y su cara (cintas que giran a su alrededor mientras trabaja, una jaula de cintas cuando celebra, puntos mientras piensa), y la órbita del icono de la barra y de la marca del panel gira en 3D alrededor de su estrella. También en modo pixelado.
 - **Panel flotante** — desacopla el panel de la barra en una tarjeta que se queda en pantalla mientras trabajas, en cualquier monitor y del tamaño que quieras.
 - **El gasto del equipo** — de hoy, de los últimos 7 días o de los últimos 30, en una frase en el pie del panel y en una página Medidor con una línea de tendencia, una barra dividida y una lista por bot o por modelo.
 - **Notificaciones** — cuando un bot responde a otro, una notificación de escritorio lleva la primera línea del turno, y el icono avisa de que hay algo nuevo esperando.
@@ -41,13 +41,12 @@ Quita el widget de la barra si tu diseño lo conservó. El plugin no crea archiv
 
 ## Uso
 
-El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas pequeñas del icono dan vueltas alrededor de la central, sin girar sobre sí mismas, y la órbita gira en profundidad a su alrededor, abriéndose en un círculo completo y cerrándose en una línea; la marca de la cabecera del panel también gira, a la mitad de ritmo, y las mascotas de los bots que trabajan se mueven.
+El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas pequeñas del icono dan vueltas alrededor de la central, sin girar sobre sí mismas, y la órbita gira en profundidad a su alrededor, abriéndose en un círculo completo y cerrándose en una línea; la marca de la cabecera del panel también gira, a la mitad de ritmo, y los avatares de los bots se mueven, cada uno a su manera: cintas alrededor del que trabaja, una jaula de cintas para el que celebra, saltitos para el que está contento, una inclinación y un suspiro para el que espera, parpadeos y miradas para el que descansa.
 
-![El icono de la barra, la marca del panel y las mascotas mientras el equipo trabaja](screenshots/motion.webp)
+![La marca del panel y cinco avatares, cada uno con su propia animación](screenshots/motion.webp)
 
-|                    |                                                                                             |
-| ------------------ | ------------------------------------------------------------------------------------------- |
 | **Clic izquierdo** | Abre el panel del equipo; otro clic lo cierra. Abrir el panel también limpia el aviso.      |
+| ------------------ | ------------------------------------------------------------------------------------------- |
 | **Clic central**   | Muestra u oculta la ventana de la app de agentes. Si la app no está corriendo, la abre.     |
 | **Clic derecho**   | Trae y enfoca la ventana, la recupera si estaba oculta, o abre la app si no está corriendo. |
 
@@ -55,7 +54,7 @@ Dentro del panel, **Esc** lo cierra (o vuelve una página) y **Backspace** vuelv
 
 ### El panel
 
-- **Inicio** — la página del equipo: el jefe en una tarjeta propia arriba, el equipo que coordina debajo, cada fila con su mascota, su punto de estado y su tarea actual. El pie dice lo que gastó el equipo en el período elegido — `$34.44 HOY · 71 TAREAS` — con un botón **Medidor** al lado.
+- **Inicio** — la página del equipo: el jefe en una tarjeta propia arriba, el equipo que coordina debajo, cada fila con su mascota, su punto de estado, su tarea actual y, si la tarea viene de un chat de grupo, una pill con el nombre de ese chat. El pie dice lo que gastó el equipo en el período elegido — `$34.44 HOY · 71 TAREAS` — con un botón **Medidor** al lado.
 - **Medidor** — el gasto del período elegido: el total con una línea de tendencia, una barra que lo divide por bot o por modelo, y la lista detrás de cada porción. El selector de período se comparte con Ajustes, así que cambiarlo en un lugar lo cambia en el otro.
 - **Ajustes** — tras el engranaje en la cabecera.
 
@@ -89,5 +88,9 @@ El botón junto al engranaje desacopla el panel de la barra y lo deja como una t
 Mission solo lee los archivos locales de la app de agentes — con MausBot, su registro de bots, su base de datos y su registro de uso — y habla con Hyprland para colocar la ventana. No tiene acceso a la red, no escucha en ningún puerto, y nada de lo que lee sale de tu máquina.
 
 Licencia MIT; ver [LICENSE](LICENSE).
+
+## Créditos
+
+Los avatares de formas y de objetos (las nueve formas y los veintiún objetos, con sus cintas en movimiento) los dibuja el motor a partir de [Open Bot Avatar](https://github.com/DominikScholz/open-bot-avatar), de Dominik Scholz, portado a Rust. Licencia MIT; la licencia se conserva en [licenses/THIRD-PARTY.txt](licenses/THIRD-PARTY.txt).
 
 Más detalle — cómo funciona el motor, cómo compilarlo y cómo añadir un idioma — está en [DEVELOPMENT.md](DEVELOPMENT.md) (en inglés).

@@ -17,9 +17,10 @@ qs_id() { qs list -a -j | jq -r '.[0].id'; }
 ipc() { qs ipc --id "$(qs_id)" call "$id" "$@"; }
 
 engines_of() {
-  local exe="$1" link
+  local exe="$1" link want=""
+  [[ -e $exe ]] && want="$(stat -Lc %d:%i "$exe")"  # the plugin can be mounted at another path than this checkout
   for link in /proc/[0-9]*/exe; do
-    [[ "$(readlink "$link" 2>/dev/null || true)" == "$exe" ]] || continue
+    [[ "$(readlink "$link" 2>/dev/null || true)" == "$exe" || ( -n $want && "$(stat -Lc %d:%i "$link" 2>/dev/null || true)" == "$want" ) ]] || continue
     link="${link#/proc/}"; echo "${link%/exe}"
   done
 }
@@ -93,34 +94,51 @@ longname='Chief Operations Orchestrator Prime|Senior Staff Principal Release Eng
 
 write_team() {
   local count="$1" long="${2:-}"
-  { [[ -n $long ]] && echo "$longname"; echo "$roster"; } | head -n "$count" | python3 -I -c '
-import json, sys
+  { [[ -n $long ]] && echo "$longname"; echo "$roster"; } | head -n "$count" | FRESH_TASKS="${FRESH_TASKS:-}" python3 -I -c '
+import json, os, sys
 bots = []
 for index, line in enumerate(sys.stdin.read().splitlines()):
     name, title, body, colour = line.split("|")
     bots.append({"id": "bot-%02d" % index, "name": name, "title": title, "description": title,
                  "chiefOfStaff": index == 0, "section": "General", "mascotBody": body, "color": colour})
+    if os.environ.get("FRESH_TASKS") == "1":  # the README/preview home: white eyes
+        bots[-1]["mascotFaceColor"] = "white"
 print(json.dumps(bots, indent=1))' >"$work/home/bots.json"
 }
 
 task() {
-  local tasks=("Plan the release" "Refactor the settings panel" "Draft the changelog" "Fix the failing build" "Summarise the research" "Review the new mockups" "Run the regression suite" "Roll out the staging deploy" "Clean the sales dataset" "Schedule the sprint" "Scan the dependencies" "Answer open tickets" "Update the docs" "Reconcile the invoices")
+  local tasks=()
+  if [[ ${FRESH_TASKS:-} == 1 ]]; then
+    tasks=("Ship the 2.0 release notes" "Waiting on the design review" "Rewrite the onboarding copy" "Migrate the billing tables" "Index the interview notes" "Polish the empty states" "Triage the flaky tests" "Approve the rollout plan" "Forecast next quarter" "Draft the sprint goals")
+    echo "${tasks[$1]}"; return
+  fi
+  tasks=("Plan the release" "Refactor the settings panel" "Draft the changelog" "Fix the failing build" "Summarise the research" "Review the new mockups" "Run the regression suite" "Roll out the staging deploy" "Clean the sales dataset" "Schedule the sprint" "Scan the dependencies" "Answer open tickets" "Update the docs" "Reconcile the invoices")
   echo "${tasks[$1]}"
 }
 
+# The README/preview home: four of the tasks come from named group chats (a pill on the row), the rest from direct chats.
+group_of() {
+  case "$1" in 0) echo g-launch ;; 2) echo g-docs ;; 4) echo g-research ;; 7) echo g-release ;; esac
+}
+
 write_state() {
-  local now_ms spec pair
+  local now_ms spec pair dest
   now_ms="$(date +%s%3N)"
-  rm -f "$work/home/runtime.db"
+  rm -f "$work/home/runtime.db" "$work/home/groups.json"
+  if [[ ${FRESH_TASKS:-} == 1 ]]; then
+    printf '%s\n' '[{"id":"g-launch","name":"Launch Room","tasks":[]},{"id":"g-docs","name":"Docs Crew","tasks":[]},{"id":"g-research","name":"Research","tasks":[]},{"id":"g-release","name":"Release Room","tasks":[]}]' >"$work/home/groups.json"
+  fi
   sqlite3 "$work/home/runtime.db" "CREATE TABLE assignments (id INTEGER PRIMARY KEY, assignee_bot_id TEXT, status TEXT, json TEXT, created_at INTEGER, finished_at INTEGER);
     CREATE INDEX assignments_status ON assignments(status); CREATE INDEX assignments_live ON assignments(assignee_bot_id, status);"
   for pair in $1; do
     local idx="${pair%%:*}" st="${pair##*:}" bot
     bot="$(printf 'bot-%02d' "$idx")"
+    dest=""
+    [[ ${FRESH_TASKS:-} == 1 && -n "$(group_of "$idx")" ]] && dest=",\"assignee\":{\"destination\":{\"kind\":\"room_thread\",\"groupId\":\"$(group_of "$idx")\"}}"
     case "$st" in
-      running) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at) VALUES ('$bot','running','{\"startedAt\": $((now_ms - 20000)), \"origin\": {\"quote\": \"$(task "$idx")\"}}',$((now_ms - 30000)));" ;;
-      waiting) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at) VALUES ('$bot','waiting','{\"brief\":\"$(task "$idx")\"}',$((now_ms - 30000)));" ;;
-      failed) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at,finished_at) VALUES ('$bot','failed','{\"brief\":\"$(task "$idx")\"}',$((now_ms - 90000)),$((now_ms - 60000)));" ;;
+      running) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at) VALUES ('$bot','running','{\"startedAt\": $((now_ms - 20000)), \"origin\": {\"quote\": \"$(task "$idx")\"}$dest}',$((now_ms - 30000)));" ;;
+      waiting) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at) VALUES ('$bot','waiting','{\"brief\":\"$(task "$idx")\"$dest}',$((now_ms - 30000)));" ;;
+      failed) sqlite3 "$work/home/runtime.db" "INSERT INTO assignments (assignee_bot_id,status,json,created_at,finished_at) VALUES ('$bot','failed','{\"brief\":\"$(task "$idx")\"$dest}',$((now_ms - 90000)),$((now_ms - 60000)));" ;;
     esac
   done
 }
@@ -184,7 +202,7 @@ widget_cfg() {
 }
 
 scene() {
-  NOFOCUS=0
+  NOFOCUS=0; FRESH_TASKS=0
   app_state installed
   case "$1" in
     home-noapp) write_team 5;   write_state "";                    hypr_state closed; app_state missing; widget_cfg true false week false; PAGE=home ;;
@@ -193,7 +211,7 @@ scene() {
     home-bots-one)     write_team 1;   write_state "";                    hypr_state open;   widget_cfg true false week false; PAGE=home ;;
     home-bots-few)     write_team 4;   write_state "0:running 2:waiting"; hypr_state open;   widget_cfg true false week false; PAGE=home ;;
     home-bots-mixed)   write_team 7;   write_state "0:running 1:running 2:waiting 3:failed 5:waiting"; hypr_state open; widget_cfg true false week false; PAGE=home ;;
-    home-bots-many)    write_team 14;  write_state "0:running 1:running 3:running 4:waiting 6:failed 9:waiting"; hypr_state open; widget_cfg true false week false; PAGE=home ;;
+    home-bots-many)    FRESH_TASKS=1; write_team 14; write_state "0:running 1:waiting 2:running 4:failed 5:running 7:waiting 9:running"; hypr_state open; widget_cfg true false week false; PAGE=home ;;
     home-bots-cost)    write_team 6;   write_state "0:running 1:waiting 3:failed"; hypr_state open; widget_cfg true false week false; PAGE=home ;;
     home-bots-nocost)  write_team 6;   write_state "0:running 1:waiting 3:failed"; hypr_state open; widget_cfg false false week false; PAGE=home ;;
     home-bots-pixel)   write_team 6;   write_state "0:running 1:waiting 3:failed"; hypr_state open; widget_cfg true true week false; PAGE=home ;;
@@ -219,22 +237,27 @@ swap_in() {
   cp -p "$shell_json" "$work/shell.json.orig"
   scene "${1:-home-bots-mixed}" >/dev/null
   local old
+  for _ in $(seq 120); do [[ -n "$(engines_of "$real_engine")" ]] && break; sleep 0.5; done  # the hub starts it after a shell restart
   old="$(engines_of "$real_engine" | tr '\n' ' ')"
   cp -p "$work/engine.wrapper" "$real_engine.new" && mv -f "$real_engine.new" "$real_engine"
   for pid in $old; do kill "$pid" 2>/dev/null || true; done
-  for _ in $(seq 60); do [[ -n "$(engines_of "$work/engine.real")" ]] && return 0; sleep 0.5; done
+  for _ in $(seq 240); do [[ -n "$(engines_of "$work/engine.real")" ]] && return 0; sleep 0.5; done
   say "the hub did not restart the engine"; exit 1
 }
 
 crop() {
   local x0 y0 x1 y1
   read -r x0 y0 x1 y1 < <(frame_of "$1") || { say "panel frame not found"; return 1; }
-  python3 -I - "$1" "$2" "$x0" "$y0" "$x1" "$y1" <<'PY'
+  python3 -I - "$1" "$work/crop.png" "$x0" "$y0" "$x1" "$y1" <<'PY'
 import sys
 from PIL import Image
 src, dst, x0, y0, x1, y1 = sys.argv[1], sys.argv[2], *map(int, sys.argv[3:])
 Image.open(src).convert("RGB").crop((x0, y0, x1 + 1, y1 + 1)).save(dst)
 PY
+  # a floating card of another app has the same gold edge: only the panel carries the "Mission" title
+  python3 -I -c 'import sys; from PIL import Image, ImageOps; ImageOps.invert(Image.open(sys.argv[1]).convert("L").crop((75, 24, 175, 50))).resize((600, 156), Image.LANCZOS).save(sys.argv[2])' "$work/crop.png" "$work/title.png"
+  tesseract "$work/title.png" - --psm 7 2>/dev/null | grep -qi 'mission' || { say "the captured frame is not the Mission panel (kept as /tmp/rejected-panel.png)"; cp "$work/crop.png" /tmp/rejected-panel.png; return 1; }
+  mv -f "$work/crop.png" "$2"
 }
 
 settle() { sleep "${SETTLE:-3.5}"; }

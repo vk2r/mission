@@ -24,6 +24,10 @@ pub fn bots_file() -> Option<PathBuf> {
     home().map(|home| home.join("bots.json"))
 }
 
+pub fn groups_file() -> Option<PathBuf> {
+    home().map(|home| home.join("groups.json"))
+}
+
 pub fn db_file() -> Option<PathBuf> {
     home().map(|home| home.join("runtime.db"))
 }

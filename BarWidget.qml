@@ -23,6 +23,12 @@ BarWidget {
   // Whether this bar's panel is showing (docked or floating), for the hub's
   // header clock.
   readonly property bool markInView: panel.item ? panel.item.surfaceOpen === true : false
+  // Whether the panel's avatars should move: it is showing and animations are on. The hub tells the
+  // engine, which draws the frames only while some bar asks for them.
+  readonly property bool avatarsMoving: root.markInView && root.motionOn
+  // The size of the slot a bot row draws its avatar in (`BotRow.qml`'s `botAvatar`), which the engine
+  // paces the poses by.
+  readonly property real avatarSlot: Style.space(28)
 
   readonly property string localeLang: I18n.systemLanguage(Quickshell.env("LC_ALL"), Quickshell.env("LC_MESSAGES"), Quickshell.env("LANG"))
   readonly property string keyboardLang: EngineHub.keyboardLang

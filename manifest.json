@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.vk2r.mission",
   "name": "Mission",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "author": "vk",
   "license": "MIT",
-  "description": "Your AI agent team, its work and its spend, right in the Omarchy bar. One click opens the team panel: every bot, its state and the task it is on. A second page shows what the team spent today, this week or this month, by bot or by model. Notifications when a bot answers another, the agent app's window one click away, eight languages, one light Rust engine. Works with MausBot.",
+  "description": "Your AI agent team, its work and its spend, right in the Omarchy bar. One click opens the team panel: every bot, its state and the task it is on. A second page shows what the team spent today, this week or this month, by bot or by model. Notifications when a bot answers another, the agent app's window one click away, eight languages, one light Rust engine.",
   "kinds": [
     "bar-widget"
   ],

@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick.Shapes
 import qs.Commons
 import qs.Commons as Commons
-import "../mascot/motion.js" as MascotMotion
 
 Item {
   id: rowItem
@@ -20,7 +19,12 @@ Item {
   readonly property string status: rowItem.modelData ? String(rowItem.modelData.status) : "unknown"
   readonly property bool working: rowItem.status === "working"
   readonly property string face: rowItem.modelData && rowItem.modelData.expression ? String(rowItem.modelData.expression) : "idle"
-  readonly property real frameMs: MascotMotion.frameMs(rowItem.face, botAvatar.width)
+  // What the engine sends to move a cursor or costume: the numbers to blink and morph by, and the pose
+  // of each frame (the formulas are the engine's, in avatar/mausbot/motion.rs).
+  readonly property var motion: rowItem.modelData && rowItem.modelData.motion ? rowItem.modelData.motion : null
+  readonly property var frame: rowItem.panel ? rowItem.panel.frameOf(rowItem.modelData) : null
+  readonly property var pose: rowItem.frame && rowItem.frame.pose ? rowItem.frame.pose : null
+  function between(range) { return range[0] + Math.random() * (range[1] - range[0]) }
   readonly property bool leading: rowItem.chief && rowItem.panel !== null && !!rowItem.panel.hostWidget
     && (rowItem.panel.teams.length > 1
       ? rowItem.panel.teamWorking(rowItem.modelData ? rowItem.modelData.department : "")
@@ -51,7 +55,7 @@ Item {
 
   Timer {
     id: variantTimer
-    interval: MascotMotion.dwellMs(rowItem.face, Math.random())
+    interval: rowItem.motion ? rowItem.between(rowItem.motion.dwell) : 0
     repeat: true
     running: rowItem.animating && rowItem.variants.length > 1
     onTriggered: {
@@ -59,7 +63,7 @@ Item {
       for (var i = 0; i < rowItem.variants.length; i++) if (i !== rowItem.variant) others.push(i)
       rowItem.nextVariant = others[Math.floor(Math.random() * others.length)]
       morph.restart()
-      variantTimer.interval = MascotMotion.dwellMs(rowItem.face, Math.random())
+      variantTimer.interval = rowItem.between(rowItem.motion.dwell)
     }
   }
   property int nextVariant: 0
@@ -109,7 +113,7 @@ Item {
 
   Item {
     id: botAvatar
-    width: Style.space(22)
+    width: Style.space(28)
     height: width
     anchors.left: parent.left
     anchors.leftMargin: rowItem.inset
@@ -120,7 +124,7 @@ Item {
       width: botAvatar.width
       height: botAvatar.height
       property real u: 1
-      readonly property int pixelGrid: 16
+      readonly property int pixelGrid: 32
       readonly property bool pixelated: rowItem.panel ? rowItem.panel.pixelAvatars === true : false
       property real sx: 1
       property real sy: 1
@@ -130,7 +134,7 @@ Item {
           xScale: sway.sx
           yScale: sway.sy
           origin.x: sway.width / 2
-          origin.y: sway.height * (MascotMotion.BASE + 15) / MascotMotion.VIEW
+          origin.y: sway.height * (rowItem.motion ? rowItem.motion.squashOrigin : 0.5)
         },
         Scale {
           xScale: sway.u
@@ -149,10 +153,18 @@ Item {
         Image {
           id: avatarImage
           readonly property string picture: rowItem.panel ? rowItem.panel.avatarSource(rowItem.drawing) : ""
-          anchors.fill: parent
+          // An engine body's picture is its extent, wider than the body so the ribbons fit. It is drawn
+          // `extent / 100` as big, with the body's 0..100 box over the slot, and spills past it: Qt does
+          // not honour the overflow the app relies on, so the picture itself carries the room.
+          readonly property var extent: rowItem.modelData && rowItem.modelData.avatarExtent ? rowItem.modelData.avatarExtent : null
+          x: avatarImage.extent ? parent.width * avatarImage.extent[0] / 100 : 0
+          y: avatarImage.extent ? parent.height * avatarImage.extent[1] / 100 : 0
+          width: avatarImage.extent ? parent.width * avatarImage.extent[2] / 100 : parent.width
+          height: width
           source: avatarImage.picture
-          sourceSize.width: 96
-          sourceSize.height: 96
+          readonly property int sourcePx: Math.round(122 * (avatarImage.extent ? avatarImage.extent[2] / 100 : 1))
+          sourceSize.width: avatarImage.sourcePx
+          sourceSize.height: avatarImage.sourcePx
           fillMode: Image.PreserveAspectFit
           smooth: true
           visible: avatarImage.status !== Image.Error
@@ -165,8 +177,8 @@ Item {
         readonly property string picture: rowItem.panel ? rowItem.panel.avatarEyes(rowItem.drawing) : ""
         anchors.fill: parent
         source: eyesImage.picture
-        sourceSize.width: 96
-        sourceSize.height: 96
+        sourceSize.width: 122
+        sourceSize.height: 122
         fillMode: Image.PreserveAspectFit
         smooth: true
         cache: false
@@ -180,7 +192,8 @@ Item {
         }
 
         function arm() {
-          var pause = MascotMotion.blinkPause(rowItem.face, Math.random())
+          var range = rowItem.motion ? rowItem.motion.blink : null
+          var pause = range ? rowItem.between(range) : -1
           if (pause >= 0 && eyesImage.visible && rowItem.animating) blinkTimer.interval = pause
           if (pause >= 0 && eyesImage.visible && rowItem.animating) blinkTimer.restart()
           else blinkTimer.stop()
@@ -193,12 +206,12 @@ Item {
         SequentialAnimation {
           id: blinkClose
           NumberAnimation {
-            target: eyesImage; property: "blink"; to: MascotMotion.BLINK_FLOOR
-            duration: MascotMotion.BLINK_MS * MascotMotion.BLINK_SHUT
+            target: eyesImage; property: "blink"; to: rowItem.motion ? rowItem.motion.blinkFloor : 1
+            duration: rowItem.motion ? rowItem.motion.blinkMs * rowItem.motion.blinkShut : 0
           }
           NumberAnimation {
             target: eyesImage; property: "blink"; to: 1
-            duration: MascotMotion.BLINK_MS * (1 - MascotMotion.BLINK_SHUT)
+            duration: rowItem.motion ? rowItem.motion.blinkMs * (1 - rowItem.motion.blinkShut) : 0
           }
           onStopped: eyesImage.arm()
         }
@@ -224,8 +237,8 @@ Item {
           Image {
             id: ghostBody
             anchors.fill: parent
-            sourceSize.width: 96
-            sourceSize.height: 96
+            sourceSize.width: 122
+            sourceSize.height: 122
             fillMode: Image.PreserveAspectFit
             smooth: true
             cache: false
@@ -234,8 +247,8 @@ Item {
         Image {
           id: ghostEyes
           anchors.fill: parent
-          sourceSize.width: 96
-          sourceSize.height: 96
+          sourceSize.width: 122
+          sourceSize.height: 122
           fillMode: Image.PreserveAspectFit
           smooth: true
           cache: false
@@ -243,16 +256,14 @@ Item {
       }
     }
 
-    Timer {
-      interval: Math.max(rowItem.frameMs, 16)
-      repeat: true
-      running: rowItem.animating && rowItem.frameMs > 0
-      triggeredOnStart: true
-      onTriggered: {
-        var p = MascotMotion.pose(rowItem.face, Date.now() - rowItem.faceStart)
-        var k = botAvatar.width / MascotMotion.VIEW
-        sway.x = p.dx * k
-        sway.y = p.dy * k
+    Connections {
+      target: rowItem
+      // Each frame the engine sends carries the pose; its shifts are fractions of the slot.
+      function onPoseChanged() {
+        var p = rowItem.pose
+        if (!p || !rowItem.animating) return
+        sway.x = p.dx * botAvatar.width
+        sway.y = p.dy * botAvatar.width
         sway.rotation = p.rot
         sway.u = p.u
         sway.sx = p.sx
@@ -325,18 +336,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Style.space(6)
 
-        Rectangle {
-          anchors.verticalCenter: parent.verticalCenter
-          width: Style.space(8)
-          height: width
-          radius: width / 2
-          readonly property color tint: rowItem.panel ? rowItem.panel.statusColor(rowItem.status) : "gray"
-          color: rowItem.panel && rowItem.panel.statusFilled(rowItem.status) ? tint : "transparent"
-          border.width: 1
-          border.color: tint
-          Behavior on border.color { ColorAnimation { duration: 120 } }
-        }
-
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: rowItem.panel ? rowItem.panel.statusWord(rowItem.status) : ""
@@ -349,16 +348,53 @@ Item {
       }
     }
 
-    Text {
+    Item {
+      id: taskLine
       width: parent.width
-      readonly property string work: rowItem.panel ? rowItem.panel.taskFor(rowItem.modelData) : ""
-      visible: work !== ""
-      textFormat: Text.PlainText
-      text: work
-      color: rowItem.dim
-      font.family: rowItem.fontFamily
-      font.pixelSize: Style.font.caption
-      elide: Text.ElideRight
+      height: Math.max(taskText.implicitHeight, chatPill.visible ? chatPill.height : 0)
+      visible: taskText.work !== "" || chatPill.visible
+
+      Text {
+        id: taskText
+        readonly property string work: rowItem.panel ? rowItem.panel.taskFor(rowItem.modelData) : ""
+        width: Math.max(0, parent.width - (chatPill.visible ? chatPill.width + Style.space(8) : 0))
+        anchors.verticalCenter: parent.verticalCenter
+        visible: work !== ""
+        textFormat: Text.PlainText
+        text: work
+        color: rowItem.dim
+        font.family: rowItem.fontFamily
+        font.pixelSize: Style.font.caption
+        elide: Text.ElideRight
+      }
+
+      // The group chat the task came from; a direct chat has none, so no pill.
+      Rectangle {
+        id: chatPill
+        readonly property string chat: rowItem.modelData && rowItem.modelData.chat ? String(rowItem.modelData.chat) : ""
+        readonly property color tint: rowItem.panel ? rowItem.panel.statusColor("working") : rowItem.accentTint
+        visible: chatPill.chat !== ""
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.min(chatLabel.implicitWidth + Style.space(8), Style.space(90))
+        height: chatLabel.implicitHeight + Style.space(2)
+        radius: height / 2
+        color: Qt.rgba(chatPill.tint.r, chatPill.tint.g, chatPill.tint.b, 0.1)
+        border.width: 1
+        border.color: Qt.rgba(chatPill.tint.r, chatPill.tint.g, chatPill.tint.b, 0.5)
+
+        Text {
+          id: chatLabel
+          anchors.centerIn: parent
+          width: Math.min(implicitWidth, chatPill.width - Style.space(8))
+          text: chatPill.chat
+          textFormat: Text.PlainText
+          color: chatPill.tint
+          font.family: rowItem.fontFamily
+          font.pixelSize: Style.space(8)
+          elide: Text.ElideRight
+        }
+      }
     }
   }
 }
