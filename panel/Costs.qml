@@ -181,70 +181,21 @@ Item {
     width: parent.width
     spacing: Style.space(16)
 
-    Item {
-      width: parent.width
-      implicitHeight: Math.max(headerLeft.implicitHeight, headerControls.implicitHeight)
-      height: implicitHeight
+    PageHeader {
+      host: page.host
+      heading: page.host.t("costs")
 
-      FloatDrag {
-        anchors.fill: parent
+      trailing: RangePicker {
+        id: rangePicker
         host: page.host
-      }
-
-      Row {
-        id: headerLeft
-
-        anchors.left: parent.left
-        anchors.right: headerControls.left
-        anchors.rightMargin: Style.space(8)
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Style.space(12)
-
-        Button {
-          id: backButton
-          anchors.verticalCenter: parent.verticalCenter
-          iconText: "\udb80\udc4d"
-          bordered: false
-          foreground: page.host.foreground
-          fontFamily: page.host.fontFamily
-          tooltipText: page.host.t("backTip")
-          onClicked: page.host.goTo("home")
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          width: Math.max(0, headerLeft.width - backButton.width - headerLeft.spacing)
-          textFormat: Text.PlainText
-          text: page.host.t("costs")
-          color: page.host.foreground
-          font.family: page.host.fontFamily
-          font.pixelSize: Style.font.title
-          font.bold: true
-          elide: Text.ElideRight
-        }
-      }
-
-      Row {
-        id: headerControls
-
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Style.space(6)
-
-        RangePicker {
-          id: rangePicker
-          host: page.host
-          width: Math.min(fitWidth, Style.space(104))
-          foreground: page.host.foreground
-          accent: page.host.accent
-          fontSize: Style.font.caption
-          rowHeight: Style.font.caption + Style.space(12)
-          popupRowHeight: Style.font.caption + Style.space(14)
-        }
+        width: Math.min(fitWidth, Style.space(104))
+        foreground: page.host.foreground
+        accent: page.host.accent
+        fontSize: Style.font.caption
+        rowHeight: Style.font.caption + Style.space(12)
+        popupRowHeight: Style.font.caption + Style.space(14)
       }
     }
-
-    PanelSeparator { width: parent.width; foreground: page.host.foreground }
 
     Item {
       id: overview

@@ -13,6 +13,7 @@ MausBot solo crea una bandeja del sistema en Windows, así que en Linux su venta
 
 - **Todo el equipo de un vistazo** — una fila por bot con su estado (trabajando, esperando, inactivo, cancelado, fallido) y la tarea que lleva, dibujado como el mapa de equipo de la propia app: el jefe en una tarjeta propia, el equipo debajo, cada bot con la mascota que le pusiste en la app, y una pill con el nombre del chat de grupo desde donde responde el bot (un chat directo no lleva ninguna).
 - **Open Bot Avatar, en Rust** — las nueve formas y los veintiún objetos de [Open Bot Avatar](https://github.com/DominikScholz/open-bot-avatar), de Dominik Scholz, portados a Rust y dibujados por el propio motor, animados en tiempo real: el avatar de cada bot se mueve según su estado y su cara (cintas que giran a su alrededor mientras trabaja, una jaula de cintas cuando celebra, puntos mientras piensa), y la órbita del icono de la barra y de la marca del panel gira en 3D alrededor de su estrella. También en modo pixelado.
+- **Ojos que siguen al mouse** — mientras el puntero está sobre el panel (acoplado o flotante) todos los bots lo miran, tanto los cursores y disfraces de MausBot como los cuerpos de Open Bot Avatar, y los ojos vuelven suavemente al centro cuando sale. Activado de entrada; el ajuste "Seguir el mouse" lo apaga, y se apaga solo si las animaciones del widget están apagadas.
 - **Panel flotante** — desacopla el panel de la barra en una tarjeta que se queda en pantalla mientras trabajas, en cualquier monitor y del tamaño que quieras.
 - **El gasto del equipo** — de hoy, de los últimos 7 días o de los últimos 30, en una frase en el pie del panel y en una página Medidor con una línea de tendencia, una barra dividida y una lista por bot o por modelo.
 - **Notificaciones** — cuando un bot responde a otro, una notificación de escritorio lleva la primera línea del turno, y el icono avisa de que hay algo nuevo esperando.
@@ -45,8 +46,9 @@ El widget vive en la barra. Mientras el equipo trabaja, las dos estrellas peque�
 
 ![La marca del panel y cinco avatares, cada uno con su propia animación](screenshots/motion.webp)
 
-| **Clic izquierdo** | Abre el panel del equipo; otro clic lo cierra. Abrir el panel también limpia el aviso.      |
+| Acción             | Qué hace                                                                                    |
 | ------------------ | ------------------------------------------------------------------------------------------- |
+| **Clic izquierdo** | Abre el panel del equipo; otro clic lo cierra. Abrir el panel también limpia el aviso.      |
 | **Clic central**   | Muestra u oculta la ventana de la app de agentes. Si la app no está corriendo, la abre.     |
 | **Clic derecho**   | Trae y enfoca la ventana, la recupera si estaba oculta, o abre la app si no está corriendo. |
 
@@ -73,6 +75,7 @@ El botón junto al engranaje desacopla el panel de la barra y lo deja como una t
 - **Notificaciones** — anuncia los turnos entre bots con una notificación de escritorio.
 - **Mostrar costo en Inicio** — el pie añade el gasto del período junto al conteo de tareas.
 - **Avatares pixelados** — dibuja las mascotas del equipo con un aspecto pixelado.
+- **Seguir el mouse** — los ojos de los avatares siguen al puntero mientras está sobre el panel.
 - **Abrir la aplicación al abrir** — inicia la app de agentes cuando se abre el panel y la app no está corriendo.
 
 ## Galería

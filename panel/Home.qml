@@ -65,126 +65,108 @@ Item {
     duration: 900
   }
 
-  Column {
+  PageHeader {
     id: header
-    width: parent.width
-    spacing: page.gap
+    host: page.host
 
-    Item {
-      width: parent.width
-      implicitHeight: Math.max(mark.height, gearButton.implicitHeight)
-      height: implicitHeight
+    Row {
+      id: headerLeft
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: Style.space(12)
 
-      FloatDrag {
-        anchors.fill: parent
-        host: page.host
+      // Same layers as the bar mark, at half its pace.
+      MissionMark {
+        id: mark
+        anchors.verticalCenter: parent.verticalCenter
+        width: Style.space(32)
+        height: width
+        artwork: "mission-mark-hero"
+        angle: page.host.motionOn ? page.host.slowSpin : 0
+        viewSize: 48
+        starA: Qt.point(-8.91, -11.88)
+        starB: Qt.point(9.18, 11.88)
+        ring: true
+        breathe: true
+        orbit: ({ rx: 17.82, ry: 6.48, stroke: 2.214, tilt: 158, start: -142, sweep: 102.1 })
+        opacity: page.markIn
+        transform: Scale {
+          xScale: 0.85 + 0.15 * page.markIn
+          yScale: 0.85 + 0.15 * page.markIn
+          origin.x: mark.width / 2
+          origin.y: mark.height / 2
+        }
       }
 
-      Row {
-        id: headerLeft
-        anchors.left: parent.left
-        anchors.right: popOutButton.left
-        anchors.rightMargin: Style.space(8)
+      Column {
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Style.space(12)
+        width: Math.max(0, headerLeft.width - mark.width - headerLeft.spacing)
+        spacing: 0
+        opacity: page.titlesIn
 
-        // Same layers as the bar mark, at half its pace.
-        MissionMark {
-          id: mark
-          anchors.verticalCenter: parent.verticalCenter
-          width: Style.space(32)
-          height: width
-          artwork: "mission-mark-hero"
-          angle: page.host.motionOn ? page.host.slowSpin : 0
-          viewSize: 48
-          starA: Qt.point(-8.91, -11.88)
-          starB: Qt.point(9.18, 11.88)
-          ring: true
-          breathe: true
-          orbit: ({ rx: 17.82, ry: 6.48, stroke: 2.214, tilt: 158, start: -142, sweep: 102.1 })
-          opacity: page.markIn
-          transform: Scale {
-            xScale: 0.85 + 0.15 * page.markIn
-            yScale: 0.85 + 0.15 * page.markIn
-            origin.x: mark.width / 2
-            origin.y: mark.height / 2
-          }
+        Text {
+          id: titleText
+          width: parent.width
+          textFormat: Text.PlainText
+          text: page.title
+          color: page.host.foreground
+          font.family: page.host.fontFamily
+          font.pixelSize: Style.font.title
+          font.bold: true
+          elide: Text.ElideRight
         }
 
-        Column {
-          anchors.verticalCenter: parent.verticalCenter
-          width: Math.max(0, headerLeft.width - mark.width - headerLeft.spacing)
+        Row {
+          width: parent.width
           spacing: 0
-          opacity: page.titlesIn
 
           Text {
-            id: titleText
-            width: parent.width
+            id: statusLabel
             textFormat: Text.PlainText
-            text: page.title
-            color: page.host.foreground
+            text: page.host.t("statusLabel").toUpperCase() + ": "
+            color: page.host.accent
             font.family: page.host.fontFamily
-            font.pixelSize: Style.font.title
+            font.pixelSize: 8
+          }
+
+          Text {
+            width: Math.max(0, parent.width - statusLabel.width)
+            textFormat: Text.PlainText
+            text: page.crewWord.toUpperCase()
+            color: page.host.accent
+            font.family: page.host.fontFamily
+            font.pixelSize: 8
             font.bold: true
             elide: Text.ElideRight
           }
-
-          Row {
-            width: parent.width
-            spacing: 0
-
-            Text {
-              id: statusLabel
-              textFormat: Text.PlainText
-              text: page.host.t("statusLabel").toUpperCase() + ": "
-              color: page.host.accent
-              font.family: page.host.fontFamily
-              font.pixelSize: 8
-            }
-
-            Text {
-              width: Math.max(0, parent.width - statusLabel.width)
-              textFormat: Text.PlainText
-              text: page.crewWord.toUpperCase()
-              color: page.host.accent
-              font.family: page.host.fontFamily
-              font.pixelSize: 8
-              font.bold: true
-              elide: Text.ElideRight
-            }
-          }
         }
-      }
-
-      Button {
-        id: popOutButton
-        anchors.right: gearButton.left
-        anchors.verticalCenter: parent.verticalCenter
-        // Same box as the settings button: the two glyphs differ in width, so each would size its own.
-        implicitWidth: gearButton.implicitWidth
-        implicitHeight: gearButton.implicitHeight
-        iconText: page.host.floating ? "\udb81\udc04" : "\udb81\udc03"
-        bordered: false
-        foreground: page.host.foreground
-        fontFamily: page.host.fontFamily
-        tooltipText: page.host.floating ? page.host.t("dockTip") : page.host.t("popOut")
-        onClicked: page.host.floating ? page.host.dock() : page.host.popOut()
-      }
-
-      Button {
-        id: gearButton
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        iconText: "\udb81\udc93"
-        bordered: false
-        foreground: page.host.foreground
-        fontFamily: page.host.fontFamily
-        tooltipText: page.host.t("settings")
-        onClicked: page.host.goTo("settings")
       }
     }
 
-    PanelSeparator { foreground: page.host.foreground }
+    trailing: [
+    Button {
+      id: popOutButton
+      // Same box as the settings button: the two glyphs differ in width, so each would size its own.
+      implicitWidth: gearButton.implicitWidth
+      implicitHeight: gearButton.implicitHeight
+      iconText: page.host.floating ? "\udb81\udc04" : "\udb81\udc03"
+      bordered: false
+      foreground: page.host.foreground
+      fontFamily: page.host.fontFamily
+      tooltipText: page.host.floating ? page.host.t("dockTip") : page.host.t("popOut")
+      onClicked: page.host.floating ? page.host.dock() : page.host.popOut()
+    },
+
+    Button {
+      id: gearButton
+      iconText: "\udb81\udc93"
+      bordered: false
+      foreground: page.host.foreground
+      fontFamily: page.host.fontFamily
+      onClicked: page.host.goTo("settings")
+    }
+    ]
   }
 
   Flickable {

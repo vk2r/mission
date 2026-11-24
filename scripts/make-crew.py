@@ -116,8 +116,8 @@ def record(work):
 def rest(work):
     """The avatars at rest, from a snapshot of the same bots idle: {bot id: svg}."""
     home, env = engine_env(work, "still")
-    bots = [{"id": f"b{i}", "name": name, "title": "Crew", "mascotBody": body, "color": colour}
-            for i, (name, body, colour, _) in enumerate(CREW)]
+    bots = [{"id": f"b{i}", "name": name, "title": "Crew", "mascotBody": body, "color": colour,
+             "mascotFaceColor": "white"} for i, (name, body, colour, _) in enumerate(CREW)]
     (home / "bots.json").write_text(json.dumps(bots))
     out = subprocess.run([ENGINE, "--once", "--no-notify"], capture_output=True, text=True, env=env, check=True).stdout
     return {bot["id"]: picture(bot["avatar"]) for bot in json.loads(out)["bots"]}

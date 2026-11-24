@@ -82,35 +82,9 @@ Column {
     }
   }
 
-  Column {
-    width: parent.width
-    spacing: Style.space(10)
-
-    Row {
-      spacing: Style.space(12)
-
-      Button {
-        anchors.verticalCenter: parent.verticalCenter
-        iconText: "\udb80\udc4d"
-        bordered: false
-        foreground: page.host.foreground
-        fontFamily: page.host.fontFamily
-        tooltipText: page.host.t("backTip")
-        onClicked: page.host.goTo("home")
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        textFormat: Text.PlainText
-        text: page.host.t("settings")
-        color: page.host.foreground
-        font.family: page.host.fontFamily
-        font.pixelSize: Style.font.title
-        font.bold: true
-      }
-    }
-
-    PanelSeparator { width: parent.width; foreground: page.host.foreground }
+  PageHeader {
+    host: page.host
+    heading: page.host.t("settings")
   }
 
   Column {
@@ -215,6 +189,12 @@ Column {
       label: page.host.t("pixelAvatars")
       checked: page.host.pixelAvatars
       onToggled: page.host.save("pixelAvatars", !page.host.pixelAvatars, false)
+    }
+
+    SettingCheck {
+      label: page.host.t("followMouse")
+      checked: page.host.followMouse
+      onToggled: page.host.save("followMouse", !page.host.followMouse, true)
     }
 
     SettingCheck {

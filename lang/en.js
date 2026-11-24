@@ -74,5 +74,6 @@ var STRINGS = {
     "costsOfUsage": "of usage",
     "showCostFooter": "Show cost in Home",
     "pixelAvatars": "Pixelated avatars",
+    "followMouse": "Follow the mouse",
     "autoLaunch": "Launch app when opened"
 }

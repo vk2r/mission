@@ -132,15 +132,15 @@ fn the_picture_at_rest_is_still_and_the_moving_one_is_a_frame_that_changes_with_
         "the still picture does not depend on the clock"
     );
 
-    assert!(oba_frame_svg(definition, &bulb("idle", false), 1.0).is_none(), "an idle bot has no frames");
-    let cheering = |age: f64| oba_frame_svg(definition, &bulb("idle", true), age).expect("a cheering bot moves");
+    assert!(oba_frame_svg(definition, &bulb("idle", false), 1.0, None).is_none(), "an idle bot has no frames");
+    let cheering = |age: f64| oba_frame_svg(definition, &bulb("idle", true), age, None).expect("a cheering bot moves");
     assert!(ribbons(&cheering(1.935)) > 0, "a cheering bulb is out with its ribbons mid-turn");
     assert_ne!(cheering(1.0), cheering(1.1), "the frames change with time");
     assert_eq!(cheering(1.0), cheering(1.0), "a frame is a function of its age alone");
-    let working = oba_frame_svg(definition, &bulb("working", false), 1.0).expect("a working bot moves");
+    let working = oba_frame_svg(definition, &bulb("working", false), 1.0, None).expect("a working bot moves");
     assert_ne!(working, cheering(1.0), "working is not done");
     let sweeps = (0..80).any(|step| {
-        let frame = oba_frame_svg(definition, &bulb("working", false), f64::from(step) * 0.1);
+        let frame = oba_frame_svg(definition, &bulb("working", false), f64::from(step) * 0.1, None);
         frame.is_some_and(|svg| ribbons(&svg) > 0)
     });
     assert!(sweeps, "a working bulb sweeps its ribbons now and then");
@@ -226,7 +226,7 @@ fn port_comparison_svgs_are_written() {
             .expect("write");
         let working = look_of(bot, "working", false);
         let Painter::Oba(definition) = painter(id) else { panic!("{id} is an engine body") };
-        let frame = oba_frame_svg(definition, &working, 1.0).expect("a working body moves");
+        let frame = oba_frame_svg(definition, &working, 1.0, None).expect("a working body moves");
         std::fs::write(dir.join(format!("{id}.working.svg")), frame).expect("write");
         let eyes = &definition.eyes;
         facts.insert(
@@ -248,7 +248,23 @@ fn an_idle_researcher_is_a_still_picture_and_only_moves_while_it_works() {
     let idle = look_of(bot.clone(), "idle", false);
     assert_eq!(idle.expression, "searching", "the resting face comes from the title");
     assert!(!looks::shown(&idle.expression, false, Some(idle.paint.working)).live);
-    assert!(oba_frame_svg(definition, &idle, 1.0).is_none(), "an idle researcher has no frames");
+    assert!(oba_frame_svg(definition, &idle, 1.0, None).is_none(), "an idle researcher has no frames");
     let busy = look_of(bot, "working", false);
-    assert!(oba_frame_svg(definition, &busy, 1.0).is_some(), "a busy researcher moves");
+    assert!(oba_frame_svg(definition, &busy, 1.0, None).is_some(), "a busy researcher moves");
+}
+
+#[test]
+fn gaze_moves_the_eyes_of_an_engine_body_even_at_rest() {
+    let bot = json!({"mascotBody": "obj-lightbulb", "color": "blue"});
+    let definition = catalog::engine_body("obj-lightbulb").expect("bulb is an engine body");
+    let idle = look_of(bot.clone(), "idle", false);
+    let at = |look: &Look, gaze| oba_frame_svg(definition, look, 1.0, gaze);
+    assert!(at(&idle, None).is_none(), "an idle bot with no gaze has no frame");
+    let centre = at(&idle, Some([0.0, 0.0])).expect("a gaze draws a bot at rest");
+    let left = at(&idle, Some([-1.0, 0.0])).expect("left");
+    let right = at(&idle, Some([1.0, 0.5])).expect("right");
+    assert_ne!(centre, left, "the eyes turn left");
+    assert_ne!(left, right, "and right");
+    let working = look_of(bot, "working", false);
+    assert_ne!(at(&working, Some([1.0, 0.0])), at(&working, Some([-1.0, 0.0])), "a moving bot looks too");
 }

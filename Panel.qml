@@ -35,10 +35,50 @@ Panel {
   readonly property bool showCost: EngineHub.showCost
   readonly property bool pixelAvatars: EngineHub.pixelAvatars
   readonly property bool autoLaunch: EngineHub.autoLaunch
+  readonly property bool followMouse: EngineHub.followMouse
   readonly property bool notifyOn: EngineHub.notifyOn
 
   readonly property bool motionOn: root.hostWidget && root.hostWidget.bar
     ? root.hostWidget.bar.foregroundAnimationEnabled !== false : true
+
+  // The avatars look at the pointer while it is over the panel, docked or floating, if the setting is
+  // on and the bar's animations are. `pointerX/Y` are the pointer's place in the panel's window.
+  property bool pointerIn: false
+  property real pointerX: 0
+  property real pointerY: 0
+  readonly property bool gazing: root.followMouse && root.motionOn && root.pointerIn && root.surfaceOpen
+  onSurfaceOpenChanged: if (!root.surfaceOpen) root.pointerIn = false
+
+  // Engine bodies are drawn by the engine, so it is told where each looks (`gaze {id: [x, y]}`): at
+  // most 15 times a second, only when it changed, and `gaze` alone when the pointer leaves.
+  property var gazeSources: []
+  property string gazeSent: ""
+  function registerGaze(item) { root.gazeSources = root.gazeSources.concat([item]) }
+  function unregisterGaze(item) { root.gazeSources = root.gazeSources.filter(function (known) { return known !== item }) }
+  function sendGaze() {
+    var map = {}
+    var any = false
+    if (root.gazing) {
+      for (var i = 0; i < root.gazeSources.length; ++i) {
+        var item = root.gazeSources[i]
+        if (!item.oba || !item.visible || !item.modelData) continue
+        var g = item.gazeTo(root.pointerX, root.pointerY)
+        map[String(item.modelData.id)] = [Math.round(g[0] * 100) / 100, Math.round(g[1] * 100) / 100]
+        any = true
+      }
+    }
+    var order = any ? "gaze " + JSON.stringify(map) : "gaze"
+    if (order === root.gazeSent) return
+    root.gazeSent = order
+    EngineHub.send(order)
+  }
+  Timer {
+    interval: 66
+    repeat: true
+    running: root.gazing
+    onTriggered: root.sendGaze()
+  }
+  onGazingChanged: if (!root.gazing) root.sendGaze()
 
   readonly property var teams: {
     var order = []
@@ -268,6 +308,8 @@ Panel {
     id: manifestFile
     path: Qt.resolvedUrl("manifest.json").toString().replace(/^file:\/\//, "")
     printErrors: false
+    watchChanges: true
+    onFileChanged: reload()
     onLoaded: {
       try { root.version = JSON.parse(manifestFile.text()).version || "" } catch (e) { root.version = "" }
     }
@@ -294,6 +336,13 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      HoverHandler {
+        onHoveredChanged: root.pointerIn = hovered
+        onPointChanged: {
+          root.pointerX = point.scenePosition.x
+          root.pointerY = point.scenePosition.y
+        }
+      }
       readonly property real wanted: root.page === "costs" ? costsPage.implicitHeight : homeView.implicitHeight
       onCloseRequested: {
         if (!root.showingHome) root.page = "home"

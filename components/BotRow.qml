@@ -44,6 +44,34 @@ Item {
 
   readonly property real inset: Style.space(8)
 
+  // Where the avatar looks while the pointer is over the panel (the app's `xr`, PlacesRail): the pointer's
+  // offset from the eyes over a scale of the slot or 160, bent through tanh so it never passes 1 and the
+  // eyes stop at the edge of the face. An engine body's gaze goes to the engine (`Panel.sendGaze`); a
+  // cursor's or costume's eyes are a picture this row moves.
+  readonly property bool oba: !!(rowItem.modelData && rowItem.modelData.avatarExtent)
+  function gazeTo(px, py) {
+    var c = botAvatar.mapToItem(null, rowItem.eyePivot[0] * botAvatar.width, rowItem.eyePivot[1] * botAvatar.height)
+    var s = Math.max(botAvatar.width, botAvatar.height, Style.space(160))
+    var dx = (px - c.x) / s
+    var dy = (py - c.y) / s
+    var len = Math.hypot(dx, dy)
+    if (!isFinite(len) || len < 1e-9) return [0, 0]
+    var k = Math.tanh(len) / len
+    return [dx * k, dy * k]
+  }
+  readonly property var gazeNow: rowItem.panel && rowItem.panel.gazing && !rowItem.oba
+    ? rowItem.gazeTo(rowItem.panel.pointerX, rowItem.panel.pointerY) : [0, 0]
+  property real eyeX: rowItem.gazeNow[0]
+  property real eyeY: rowItem.gazeNow[1]
+  Behavior on eyeX { enabled: rowItem.panel !== null && rowItem.panel.motionOn; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+  Behavior on eyeY { enabled: rowItem.panel !== null && rowItem.panel.motionOn; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+  // How far the eyes travel inside the face: a small share of the slot.
+  readonly property real eyeTravelX: botAvatar.width * 0.05
+  readonly property real eyeTravelY: botAvatar.height * 0.04
+
+  Component.onCompleted: if (rowItem.panel) rowItem.panel.registerGaze(rowItem)
+  Component.onDestruction: if (rowItem.panel) rowItem.panel.unregisterGaze(rowItem)
+
   width: parent ? parent.width : 0
   implicitHeight: Style.spacing.controlHeight + (rowItem.working || rowItem.chief ? Style.space(7) * 2 : 0)
   height: implicitHeight
@@ -184,12 +212,18 @@ Item {
         cache: false
         visible: eyesImage.picture !== "" && avatarImage.visible
         property real blink: 1
-        transform: Scale {
-          xScale: 1
-          yScale: eyesImage.blink
-          origin.x: rowItem.eyePivot[0] * eyesImage.width
-          origin.y: rowItem.eyePivot[1] * eyesImage.height
-        }
+        transform: [
+          Scale {
+            xScale: 1
+            yScale: eyesImage.blink
+            origin.x: rowItem.eyePivot[0] * eyesImage.width
+            origin.y: rowItem.eyePivot[1] * eyesImage.height
+          },
+          Translate {
+            x: rowItem.eyeX * rowItem.eyeTravelX
+            y: rowItem.eyeY * rowItem.eyeTravelY
+          }
+        ]
 
         function arm() {
           var range = rowItem.motion ? rowItem.motion.blink : null
@@ -252,6 +286,10 @@ Item {
           fillMode: Image.PreserveAspectFit
           smooth: true
           cache: false
+          transform: Translate {
+            x: rowItem.eyeX * rowItem.eyeTravelX
+            y: rowItem.eyeY * rowItem.eyeTravelY
+          }
         }
       }
     }

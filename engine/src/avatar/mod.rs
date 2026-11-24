@@ -9,7 +9,8 @@ use mausbot::mascot::{self, Look, Part};
 use oba::catalog;
 use oba::path::{bounds, flatten_path, fmt, parse_path};
 use oba::render::{avatar_extent, render_avatar_svg};
-use oba::types::{AvatarDefinition, RenderOptions};
+use oba::motion::{BASE_PITCH, BASE_YAW, LOOK_PITCH, LOOK_YAW};
+use oba::types::{AvatarDefinition, Gaze, RenderOptions, View};
 
 /// The size, in pixels, every avatar picture is drawn at: the slot the bar shows it in.
 const PICTURE_SIZE: f64 = 96.0;
@@ -87,13 +88,39 @@ fn oba_svg(definition: &AvatarDefinition, look: &Look) -> Option<String> {
 }
 
 /// One frame of a moving engine body, `age_s` seconds into its state, or `None` for a body that is at
-/// rest (`looks::shown` says whether it moves) or whose drawing fails.
-pub fn oba_frame_svg(definition: &AvatarDefinition, look: &Look, age_s: f64) -> Option<String> {
+/// rest (`looks::shown` says whether it moves) and looks nowhere, or whose drawing fails. `gaze` is where
+/// it looks, each axis -1..1: a body that is at rest then gets a calm frame with its eyes turned, the
+/// still picture `oba_svg` draws but for the gaze.
+pub fn oba_frame_svg(definition: &AvatarDefinition, look: &Look, age_s: f64, gaze: Option<[f64; 2]>) -> Option<String> {
     let shown = looks::shown(&look.expression, look.paint.cheering, Some(look.paint.working));
-    if !shown.live {
-        return None;
-    }
-    let options = RenderOptions { time: Some(age_s), state_age: Some(age_s), ..oba_options(look, shown) };
+    // How much it attends: nothing at the centre, all of it from a fifth of the range, so a gaze that
+    // eases back to the centre also eases the body back to its resting turn instead of snapping.
+    let attention = gaze.map(|[x, y]| (x.hypot(y) / 0.2).min(1.0));
+    let options = match (shown.live, gaze, attention) {
+        (true, Some([x, y]), Some(weight)) => RenderOptions {
+            time: Some(age_s),
+            state_age: Some(age_s),
+            gaze: Some(Gaze { x, y, weight: Some(weight) }),
+            ..oba_options(look, shown)
+        },
+        (true, ..) => RenderOptions { time: Some(age_s), state_age: Some(age_s), ..oba_options(look, shown) },
+        (false, Some([x, y]), Some(weight)) => {
+            // Reduced motion keeps the body still, so the turn the app gives a body that looks somewhere
+            // (`motion.rs`, LOOK_YAW and LOOK_PITCH) is added here as a view rotation.
+            let view = View {
+                yaw: weight * (x * LOOK_YAW - BASE_YAW),
+                pitch: weight * (-y * LOOK_PITCH - BASE_PITCH / 2.0),
+            };
+            RenderOptions {
+                time: Some(0.0),
+                reduced_motion: true,
+                gaze: Some(Gaze { x, y, weight: None }),
+                view: Some(view),
+                ..oba_options(look, shown)
+            }
+        }
+        (false, ..) => return None,
+    };
     in_extent(definition, render_avatar_svg(definition, &options).ok()?)
 }
 

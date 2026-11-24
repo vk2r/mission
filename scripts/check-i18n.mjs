@@ -194,7 +194,7 @@ for (const [code, key, expected] of textExpectations) {
   if (got !== expected) problems.push(`text ${code} ${key}: expected "${expected}", got "${got}"`)
 }
 
-const mustDifferFromEnglish = ["costs", "sectionCosts", "groupByBot", "groupByModel", "sectionOther", "taskTip", "showCostFooter", "pixelAvatars", "autoLaunch", "costTip", "statusLabel", "crewWorking", "crewWaiting", "crewReady"]
+const mustDifferFromEnglish = ["costs", "sectionCosts", "groupByBot", "groupByModel", "sectionOther", "taskTip", "showCostFooter", "pixelAvatars", "followMouse", "autoLaunch", "costTip", "statusLabel", "crewWorking", "crewWaiting", "crewReady"]
 for (const code of codes) {
   if (code === "en" || !tables[code] || !tables.en) continue
   for (const key of mustDifferFromEnglish) {

@@ -13,6 +13,7 @@ MausBot only builds a system tray on Windows, so on Linux its window has no way 
 
 - **The whole team at a glance** — one row per bot with its state (working, waiting, idle, cancelled, failed) and the task it is on, drawn like the app's own team map: the chief on a card of its own, the team below it, each bot wearing the mascot you gave it in the app, and a pill with the name of the group chat the bot is answering from (a direct chat has none).
 - **Open Bot Avatar, in Rust** — the nine shapes and twenty-one objects of [Open Bot Avatar](https://github.com/DominikScholz/open-bot-avatar) by Dominik Scholz, ported to Rust and drawn by the engine itself, animated in real time: each bot's avatar moves with its state and its face (ribbons turning round it while it works, a cage of ribbons when it celebrates, dots while it thinks), and the orbit in the bar icon and in the panel's mark turns in 3D round its star. Pixel mode too.
+- **Eyes that follow the mouse** — while the pointer is over the panel (docked or floating) every bot looks at it, MausBot cursors and costumes and Open Bot Avatar bodies alike, and the eyes ease back to the centre when it leaves. On by default; the "Follow the mouse" setting turns it off, and it is off by itself when the widget's animations are.
 - **Floating panel** — pop the panel out of the bar into a card that stays on screen while you work, on any monitor, at the size you like.
 - **The team's spend** — for today, the last 7 days or the last 30, in one sentence on the panel footer and on a Gauge page with a sparkline, a split bar and a list by bot or by model.
 - **Notifications** — when a bot answers another bot, a desktop notification carries the first line of the turn, and the icon lets you know something new is waiting.
@@ -45,8 +46,9 @@ The widget lives in the bar. While the team works, the two small stars in the ic
 
 ![The panel's mark and five avatars, each with its own animation](screenshots/motion.webp)
 
-| **Left click**   | Opens the team panel; another click closes it. Opening the panel also clears the alert.                   |
+| Action           | What it does                                                                                              |
 | ---------------- | --------------------------------------------------------------------------------------------------------- |
+| **Left click**   | Opens the team panel; another click closes it. Opening the panel also clears the alert.                   |
 | **Middle click** | Shows or hides the agent app's window. If the app is not running, it launches it.                         |
 | **Right click**  | Raises and focuses the window, brings it back if it was hidden, or launches the app if it is not running. |
 
@@ -73,6 +75,7 @@ The button beside the gear pops the panel out of the bar into a floating card th
 - **Notifications** — announce turns between bots with a desktop notification.
 - **Show cost in Home** — the footer adds the period's spend next to the task count.
 - **Pixelated avatars** — draw the team mascots with a pixelated look.
+- **Follow the mouse** — the avatars' eyes follow the pointer while it is over the panel.
 - **Launch app when opened** — start the agent app when the panel opens and the app is not running.
 
 ## Gallery

@@ -27,6 +27,26 @@ const LAUNCH_TIMEOUT: Duration = Duration::from_secs(20);
 const SETTLE: Duration = Duration::from_millis(250);
 const LOCK_RETRY: Duration = Duration::from_secs(5);
 
+/// The share of the way a gaze eases to its target in one frame (30 a second), and how near the centre
+/// it counts as back.
+const GAZE_EASE: f64 = 0.25;
+const GAZE_REST: f64 = 0.01;
+
+/// `{"<bot id>": [x, y], ...}` after the `gaze` order: each axis is clamped to -1..1, anything that is
+/// not a pair of numbers is left out, and no argument, `off` or bad JSON means nobody looks anywhere.
+fn parse_gaze(rest: &str) -> frames::Gazes {
+    let Ok(Value::Object(map)) = serde_json::from_str::<Value>(rest.trim()) else {
+        return frames::Gazes::new();
+    };
+    map.into_iter()
+        .filter_map(|(id, pair)| {
+            let [x, y] = <[Value; 2]>::try_from(pair.as_array()?.clone()).ok()?;
+            let (x, y) = (x.as_f64()?, y.as_f64()?);
+            (x.is_finite() && y.is_finite()).then(|| (id, [x.clamp(-1.0, 1.0), y.clamp(-1.0, 1.0)]))
+        })
+        .collect()
+}
+
 const PICTURE_GRACE: Duration = Duration::from_secs(65);
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -116,8 +136,16 @@ pub struct Engine {
     animate: bool,
     /// The slot the bar draws an avatar in, in pixels, from `animate <px>`.
     slot: f64,
+    /// Where the bar says each bot should look (the pointer is over its panel), by bot id; empty when it
+    /// is not. `gazing` eases toward it each frame and is what the bodies are drawn with.
+    gaze_target: frames::Gazes,
+    gazing: frames::Gazes,
     /// The last frames line named some bots, so the bar has to be told when they stop.
     framed: bool,
+    /// The last tick drew something that moves by itself (not just bodies held at a settled gaze).
+    drawn_moving: bool,
+    /// What the bodies at rest were last drawn as for the gaze they hold, until the bots or the slot change.
+    held: frames::Held,
     frames_pruned: Option<Instant>,
 
     costs: Value,
@@ -182,7 +210,11 @@ impl Engine {
             expiry: None,
             animate: false,
             slot: frames::DEFAULT_SLOT_PX,
+            gaze_target: frames::Gazes::new(),
+            gazing: frames::Gazes::new(),
             framed: false,
+            drawn_moving: false,
+            held: frames::Held::new(),
             frames_pruned: None,
             costs: json!({}),
             usage_stamps: Vec::new(),
@@ -242,12 +274,19 @@ impl Engine {
             && (rest.is_empty() || rest.starts_with(char::is_whitespace))
         {
             self.animate = true;
+            self.held.clear();
             self.slot = rest
                 .trim()
                 .parse::<f64>()
                 .ok()
                 .filter(|px| px.is_finite() && *px > 0.0)
                 .map_or(frames::DEFAULT_SLOT_PX, |px| px.min(512.0));
+            return;
+        }
+        if let Some(rest) = name.strip_prefix("gaze")
+            && (rest.is_empty() || rest.starts_with(char::is_whitespace))
+        {
+            self.gaze_target = parse_gaze(rest);
             return;
         }
         let Some(order) = Order::parse(name) else {
@@ -263,13 +302,64 @@ impl Engine {
     /// How long until the next frames line is due: `Some` while the bar wants moving avatars and one
     /// moves, and once more right away to say they stopped.
     fn frame_period(&self) -> Option<Duration> {
-        let moving = if self.animate { frames::period(&self.bots, self.slot) } else { None };
-        moving.or(self.framed.then_some(Duration::ZERO))
+        if !self.animate {
+            return self.framed.then_some(Duration::ZERO);
+        }
+        let gazes = self.gazing_now();
+        let moving = frames::period(&self.bots, self.slot, &self.unsettled(&gazes));
+        // A bot held at a settled gaze keeps its picture without a new frame, so it asks for none; the
+        // bar is only told when the frames stop, not while they hold.
+        let held = moving.is_none() && frames::period(&self.bots, self.slot, &gazes).is_some();
+        moving.or((self.framed && !held).then_some(Duration::ZERO)).or(self.drawn_moving.then_some(Duration::ZERO))
+    }
+
+    /// The gazes frames are due for: those still easing or held, so a gaze that was just ordered counts
+    /// before the first frame has eased it.
+    fn gazing_now(&self) -> frames::Gazes {
+        let mut now = self.gazing.clone();
+        for id in self.gaze_target.keys() {
+            now.entry(id.clone()).or_insert([0.0, 0.0]);
+        }
+        now
+    }
+
+    /// Whether a bot's eased gaze has reached the one ordered (within `GAZE_REST`).
+    fn settled(&self, id: &str, now: [f64; 2]) -> bool {
+        self.gaze_target.get(id).is_some_and(|to| (0..2).all(|axis| (to[axis] - now[axis]).abs() <= GAZE_REST))
+    }
+
+    /// `gazes` without the bots whose gaze has settled: those need no new frame until it changes.
+    fn unsettled(&self, gazes: &frames::Gazes) -> frames::Gazes {
+        gazes.iter().filter(|(id, now)| !self.settled(id, **now)).map(|(id, now)| (id.clone(), *now)).collect()
+    }
+
+    /// One frame of easing: each bot's gaze moves a share of the way to where the bar wants it, and
+    /// one that has come back to the centre with no target left is dropped (it is at rest again).
+    fn ease_gaze(&mut self) {
+        for id in self.gaze_target.keys() {
+            self.gazing.entry(id.clone()).or_insert([0.0, 0.0]);
+        }
+        let targets = &self.gaze_target;
+        self.gazing.retain(|id, now| {
+            let to = targets.get(id).copied().unwrap_or([0.0, 0.0]);
+            for axis in 0..2 {
+                now[axis] += (to[axis] - now[axis]) * GAZE_EASE;
+            }
+            targets.contains_key(id) || now.iter().any(|v| v.abs() > GAZE_REST)
+        });
     }
 
     /// The frames of the bots that move now, or the line that says none does any more.
     fn frames(&mut self) -> Option<String> {
-        let moving = self.animate && frames::period(&self.bots, self.slot).is_some();
+        self.ease_gaze();
+        let moving = self.animate && frames::period(&self.bots, self.slot, &self.gazing).is_some();
+        let active = moving && frames::period(&self.bots, self.slot, &self.unsettled(&self.gazing)).is_some();
+        // Everything that moves has come to rest and what is left holds its gaze: one last frame to
+        // put those in their place, then silence until a gaze changes.
+        let last = std::mem::replace(&mut self.drawn_moving, active);
+        if moving && !active && !last {
+            return None;
+        }
         if !moving {
             if !std::mem::take(&mut self.framed) {
                 return None;
@@ -279,7 +369,7 @@ impl Engine {
             return Some(frames::clear_line());
         }
         let now_ms = self.clock.now().as_millisecond() as f64;
-        let drawn = frames::render(&self.bots, now_ms, self.slot);
+        let drawn = frames::render(&self.bots, now_ms, self.slot, &self.gazing, &mut self.held);
         self.framed = drawn.count > 0;
         if self.frames_pruned.is_none_or(|at| at.elapsed() >= Duration::from_secs(1)) {
             let mut keep = roster::picture_paths(&self.bots);
@@ -504,6 +594,7 @@ impl Engine {
             None => Vec::new(),
         };
         if bots != self.bots {
+            self.held.clear();
             self.bots = bots;
             self.changed = true;
         }
@@ -768,6 +859,43 @@ mod tests {
         let clock = Shifted::to(reference);
         let drift = clock.now().as_millisecond() - reference.as_millisecond();
         assert!((0..2000).contains(&drift), "the shifted clock starts at the given moment, {drift} ms off");
+    }
+
+    #[test]
+    fn a_gaze_order_reads_clamped_pairs_and_nothing_else() {
+        let got = parse_gaze(r#" {"a": [0.5, -2], "b": [1], "c": "x", "d": [null, 0]} "#);
+        assert_eq!(got.len(), 1);
+        assert_eq!(got["a"], [0.5, -1.0]);
+        assert!(parse_gaze("").is_empty());
+        assert!(parse_gaze("off").is_empty());
+        assert!(parse_gaze("[1,2]").is_empty());
+    }
+
+    #[test]
+    fn a_bot_at_rest_stops_drawing_once_its_gaze_settles() {
+        let mut engine = Engine::new(&Options { once: true, ..Options::default() });
+        let row = frames::gaze_tests::row("idle");
+        let id = frames::key(&row);
+        engine.bots = vec![row];
+        engine.animate = true;
+        engine.gaze_target = frames::Gazes::from([(id, [0.8, -0.3])]);
+        let mut drawn = 0;
+        for _ in 0..60 {
+            if engine.frames().is_some() {
+                drawn += 1;
+            }
+        }
+        assert!((2..40).contains(&drawn), "it draws while the gaze eases, then holds: {drawn} frames");
+        assert_eq!(engine.frame_period(), None, "a held gaze asks for no more frames");
+        assert!(engine.frames().is_none(), "and a tick draws nothing");
+        engine.gaze_target = frames::Gazes::new();
+        assert!(engine.frame_period().is_some(), "the gaze leaving wakes it to ease back");
+        let mut cleared = false;
+        for _ in 0..60 {
+            cleared |= engine.frames().is_some_and(|line| line.contains("{}"));
+        }
+        assert!(cleared, "once back at the centre the bar is told the frames stopped");
+        assert_eq!(engine.frame_period(), None);
     }
 
     #[test]

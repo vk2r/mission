@@ -221,7 +221,7 @@ scene() {
     gauge-focus)       write_team 8;   write_state "0:running 2:waiting"; hypr_state open; widget_cfg true false week false; PAGE=costs ;;
     gauge-day)         write_team 8;   write_state "0:running";           hypr_state open; widget_cfg true false day false;  PAGE=costs ;;
     gauge-month)       write_team 8;   write_state "0:running";           hypr_state open; widget_cfg true false month false; PAGE=costs ;;
-    settings)          write_team 6;   write_state "0:running";           hypr_state open; widget_cfg true false week true; PAGE=settings ;;
+    settings)          write_team 8;   write_state "0:running";           hypr_state open; widget_cfg true false week true; PAGE=settings ;;
     bar)               write_team 6;   write_state "0:running 1:running"; hypr_state open; widget_cfg true false week false; PAGE=none ;;
     *) say "unknown scene $1"; exit 2 ;;
   esac
@@ -256,7 +256,7 @@ Image.open(src).convert("RGB").crop((x0, y0, x1 + 1, y1 + 1)).save(dst)
 PY
   # a floating card of another app has the same gold edge: only the panel carries the "Mission" title
   python3 -I -c 'import sys; from PIL import Image, ImageOps; ImageOps.invert(Image.open(sys.argv[1]).convert("L").crop((75, 24, 175, 50))).resize((600, 156), Image.LANCZOS).save(sys.argv[2])' "$work/crop.png" "$work/title.png"
-  tesseract "$work/title.png" - --psm 7 2>/dev/null | grep -qi 'mission' || { say "the captured frame is not the Mission panel (kept as /tmp/rejected-panel.png)"; cp "$work/crop.png" /tmp/rejected-panel.png; return 1; }
+  tesseract "$work/title.png" - --psm 7 2>/dev/null | grep -qiE 'mission|settin|gauge' || { say "the captured frame is not the Mission panel (kept as /tmp/rejected-panel.png)"; cp "$work/crop.png" /tmp/rejected-panel.png; return 1; }
   mv -f "$work/crop.png" "$2"
 }
 
@@ -309,7 +309,8 @@ set_panel() {
   local want="$1" try
   for try in 1 2 3; do
     if panel_up; then [[ $want == up ]] && return 0; else [[ $want == down ]] && return 0; fi
-    click_at "$ix" "$iy"; sleep 1.2
+    if [[ $want == up ]]; then ipc open >/dev/null; else ipc close >/dev/null; fi
+    sleep 1.2
   done
   rm -f "$work/full.png"; say "could not get the panel $want"; return 1
 }
@@ -331,8 +332,7 @@ shoot() {
   set_panel down; set_panel up
   read -r x0 y0 x1 y1 < <(frame_of "$work/full.png") || { say "panel frame not found for $name"; rm -f "$work/full.png"; return 1; }
   case "$PAGE" in
-    costs)    click_at "$(awk -v m="$mx" -v s="$sc" -v x="$x1" 'BEGIN{print m + x/s - 52}')" "$(awk -v m="$my" -v s="$sc" -v y="$y1" 'BEGIN{print m + y/s - 33}')" ;;
-    settings) click_at "$(awk -v m="$mx" -v s="$sc" -v x="$x1" 'BEGIN{print m + x/s - 34}')" "$(awk -v m="$my" -v s="$sc" -v y="$y0" 'BEGIN{print m + y/s + 32}')" ;;
+    costs|settings) ipc page "$PAGE" >/dev/null; sleep 0.6 ;;
   esac
   if [[ ${NOFOCUS:-} == 1 ]]; then
     move_cursor "$(awk -v m="$mx" -v s="$sc" -v x="$x0" -v x1="$x1" 'BEGIN{print m + (x+x1)/2/s}')" "$(awk -v m="$my" -v s="$sc" -v y="$y0" 'BEGIN{print m + y/s + 14}')"

@@ -117,6 +117,7 @@ Scope {
   readonly property bool showCost: hub.flag("showCost", false)
   readonly property bool pixelAvatars: hub.flag("pixelAvatars", false)
   readonly property bool autoLaunch: hub.flag("autoLaunch", false)
+  readonly property bool followMouse: hub.flag("followMouse", true)
   readonly property bool floating: hub.flag("floating", false)
   readonly property string floatScreen: String(hub.setting("floatScreen", ""))
   readonly property real floatX: hub.number("floatX", -1)

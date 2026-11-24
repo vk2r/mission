@@ -74,5 +74,6 @@ var STRINGS = {
     "costsOfUsage": "do uso",
     "showCostFooter": "Mostrar custo no Início",
     "pixelAvatars": "Avatares pixelados",
+    "followMouse": "Seguir o mouse",
     "autoLaunch": "Abrir o aplicativo ao abrir"
 }

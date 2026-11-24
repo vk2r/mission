@@ -74,5 +74,6 @@ var STRINGS = {
     "costsOfUsage": "van het gebruik",
     "showCostFooter": "Kosten op Start tonen",
     "pixelAvatars": "Gepixelde avatars",
+    "followMouse": "Muis volgen",
     "autoLaunch": "App starten bij openen"
 }
